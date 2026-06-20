@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "iris_search",
+  "version": "${version}",
+  "name": "IrisSearch",
+  "description": "A mod which adds a search bar to the Iris mod.\nReport issues on discord!",
+  "authors": ["SpacEagle17"],
+  "contact": {
+    "homepage": "https://euphoriapatches.com/discord",
+    "sources": "https://github.com/SpacEagle17/IrisSearch",
+    "issues": "https://euphoriapatches.com/contact"
+  },
+  "license": "LGPL-3.0",
+  "icon": "icon.png",
+  "environment": "client",
+  "depends": {
+    "minecraft": ">=1.20.1",
+    "iris": "*"
+  },
+  "entrypoints": {
+    "main": ["com.spaceagle17.irissearch.fabric.ClientIrisSearch"]
+  },
+  "mixins": ["iris_search.mixins.json"],
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://euphoriapatches.com/discord",
+        "modmenu.donate": "https://euphoriapatches.com/support",
+        "modmenu.patreon": "https://euphoriapatches.com/support"
+      },
+      "update_checker": true
+    }
+  }
+}

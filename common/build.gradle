@@ -1,0 +1,40 @@
+plugins {
+	id 'java-library'
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Common dependencies that ALL mod loaders need
+	implementation 'com.google.code.gson:gson:2.8.9'
+	implementation 'org.apache.commons:commons-compress:1.21'
+	implementation 'commons-io:commons-io:2.11.0'
+	implementation 'commons-codec:commons-codec:1.15'
+	compileOnly 'com.google.guava:guava:32.1.2-jre'
+
+	// OSHI for CPU usage monitoring (optional - only used if available at runtime)
+	compileOnly 'com.github.oshi:oshi-core:6.1.6'
+	compileOnly("org.jetbrains:annotations:24.1.0")
+
+	// Minecraft-related dependencies (provided by loader-specific modules)
+	// These are compileOnly because the actual implementation comes from Minecraft/loader
+	compileOnly 'org.apache.logging.log4j:log4j-api:2.17.1'
+	compileOnly 'org.apache.logging.log4j:log4j-core:2.17.1'
+	implementation 'org.joml:joml:1.10.5'
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 17
+
+	it.options.compilerArgs.addAll([
+		"-Xlint:-options",
+		"-Xlint:-processing"
+	])
+}

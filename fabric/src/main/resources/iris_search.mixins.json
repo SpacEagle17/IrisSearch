@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.spaceagle17.irissearch.fabric.mixin",
+  "plugin": "com.spaceagle17.irissearch.fabric.mixin.IrisSearchMixinPlugin",
+  "mixins": [
+    "IrisElementRowMixin",
+    "OptionMenuContainerMixin"
+  ],
+  "client": [
+    "ScreenAccessor",
+    "ShaderPackOptionListHeaderEntryMixin",
+    "ShaderPackOptionListMixin",
+    "ShaderPackScreenMixin",
+    "YarnShaderPackOptionListHeaderEntryMixin",
+    "YarnShaderPackScreenMixin"
+  ]
+}

@@ -1,0 +1,280 @@
+// Root build.gradle for multi-loader IrisSearch
+// This orchestrates building all mod loader variants
+
+plugins {
+	id 'base'
+}
+
+// Load version properties once for all projects
+def versionProps = new Properties()
+file("version.properties").withInputStream { versionProps.load(it) }
+
+// Load gradle properties
+def gradleProps = new Properties()
+file("gradle.properties").withInputStream { gradleProps.load(it) }
+
+// Global publishing configuration
+
+// Only do a test run if enabled; set to false to do an actual publish
+ext.publishTestRun = !(gradleProps.getProperty('do_live_publishing', 'false').toBoolean())
+
+ext.changelogFile = file("CHANGELOG.md")
+ext.publishConfirmed = false
+ext.skipCurseforge = false
+ext.skipModrinth = false
+
+allprojects {
+    group = 'com.spaceagle17'
+	ext.versionProps = versionProps
+	ext.changelogFile = rootProject.ext.changelogFile
+	ext.publishTestRun = rootProject.ext.publishTestRun
+}
+
+// Create a task to validate the changelog at root level
+tasks.register('validateChangelog') {
+    outputs.upToDateWhen {false}
+    doLast {
+        def baseVersion = versionProps.getProperty('mod_version')
+
+        if (!changelogFile.exists()) {
+            throw new GradleException("CHANGELOG.md was missing and has been created. Please update it with release notes and try again.")
+        }
+
+        def changelogContent = changelogFile.text
+
+        if (!changelogContent.contains(baseVersion)) {
+            throw new GradleException("CHANGELOG.md does not contain version ${baseVersion}. Please update the changelog before publishing.")
+        }
+
+        println "\u001B[32m✓ Changelog validated for version: ${baseVersion}\u001B[0m"
+    }
+}
+
+// Create a confirmation task at root level that runs once for all projects
+tasks.register('confirmPublish') {
+    dependsOn validateChangelog
+
+    doLast {
+        if (!publishConfirmed) {
+            Thread.sleep(6500)
+            println "\n${"=" * 60}"
+            println "PUBLISH CONFIRMATION"
+            println "${"=" * 60}"
+            println "Base Version: ${versionProps.getProperty('mod_version')}"
+            println "Test Run: ${publishTestRun ? publishTestRun : "\u001B[31m${publishTestRun}\u001B[0m"}"
+            println "${"=" * 60}"
+
+            System.out.print("Are you sure you want to proceed? (yes/no): ")
+            System.out.flush()
+
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def finalConfirmation = reader.readLine()?.toLowerCase()?.trim()
+
+            if (finalConfirmation != 'yes' && finalConfirmation != 'y') {
+                throw new GradleException("Publishing cancelled.")
+            }
+
+            // Extra confirmation if this is NOT a Test run
+            if (!publishTestRun) {
+                println "\n${"!" * 60}"
+                println "⚠️  LIVE PUBLISH WARNING ⚠️"
+                println "${"!" * 60}"
+                println "\u001B[31mNOT A TEST RUN!\u001B[0m"
+                println "This will perform a REAL UPLOAD to CurseForge and/or Modrinth!"
+                println "Files will be publicly available immediately!"
+                println "${"!" * 60}"
+                System.out.print("\nAre you ABSOLUTELY SURE you want to proceed? (yes/no): ")
+                System.out.flush()
+
+                def liveConfirmation = reader.readLine()?.toLowerCase()?.trim()
+
+                if (liveConfirmation != 'yes' && liveConfirmation != 'y') {
+                    throw new GradleException("Live publishing cancelled. No files were uploaded.")
+                }
+
+                println "\n✓ Live publish confirmed. Proceeding with REAL upload...\n"
+            }
+
+            System.out.print("\nPublish to (1=Both, 2=CurseForge only, 3=Modrinth only): ")
+            System.out.flush()
+
+            def platformChoice = reader.readLine()?.trim()
+
+            if (platformChoice == '2') {
+                skipModrinth = true
+                println "Selected: CurseForge only"
+            } else if (platformChoice == '3') {
+                skipCurseforge = true
+                println "Selected: Modrinth only"
+            } else if (platformChoice == '1') {
+                println "Selected: Both platforms"
+            } else {
+                throw new GradleException("Invalid selection. Publishing cancelled.")
+            }
+
+            publishConfirmed = true
+            println "\nConfirmation complete. Proceeding with publishing...\n"
+        }
+    }
+}
+
+// Task to clean the root build/libs directory
+tasks.register('cleanLibs') {
+    group = 'build'
+    description = 'Cleans the root build/libs directory'
+
+    doLast {
+        def libsDir = file("${rootProject.buildDir}/libs")
+        if (libsDir.exists()) {
+            println "Cleaning ${libsDir.absolutePath}..."
+            libsDir.deleteDir()
+            println "\u001B[32m✓ Root build/libs directory cleaned\u001B[0m"
+        }
+    }
+}
+
+// Define build order: neoforge -> forge -> fabric
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Builds all mod loader variants in the correct order'
+
+    dependsOn cleanLibs
+
+    if (project.findProject(":neoforge") != null) {
+        println "Building Neoforge variant..."
+        dependsOn ":neoforge:build"
+    }
+
+    if (project.findProject(":forge") != null) {
+        println "Building Forge variant..."
+        dependsOn ":forge:build"
+    }
+
+    if (project.findProject(":fabric") != null) {
+        println "Building Fabric variant..."
+        dependsOn ":fabric:build"
+    }
+    doLast {
+        Thread.sleep(2000)
+        def libsDir = file("${rootProject.buildDir}/libs")
+        def zipFile = file("${libsDir}/IrisSearchMod_UNZIP_ME.zip")
+
+        if (libsDir.exists()) {
+            ant.zip(destfile: zipFile) {
+                fileset(dir: libsDir) {
+                    exclude(name: zipFile.name)
+                }
+            }
+
+            println "Created ${zipFile.absolutePath}"
+        }
+
+        println "\n" + "=" * 60
+        println "\u001B[32mAll mod loader variants built successfully!\u001B[0m"
+        println "=" * 60
+        println "All JARs are available in: build/libs/"
+        println "=" * 60
+    }
+}
+
+// Define publish order: same as build order
+tasks.register('publishAll') {
+    group = 'publishing'
+    description = 'Publishes all mod loader variants in the correct order'
+
+    dependsOn cleanLibs
+
+    if (project.findProject(":neoforge") != null) {
+        println "Publishing Neoforge variant..."
+        dependsOn ':neoforge:publishMods'
+    }
+    if (project.findProject(":forge") != null) {
+        println "Publishing Forge variant..."
+        dependsOn ':forge:publishMods'
+    }
+    if (project.findProject(":fabric") != null) {
+        println "Publishing Fabric variant..."
+        dependsOn ':fabric:publishMods'
+    }
+
+    // Must confirm before publishing anything
+    dependsOn confirmPublish
+
+    doLast {
+        println "\n" + "=" * 60
+        println "\u001B[32mAll mod loader variants published successfully!\u001B[0m"
+        println "=" * 60
+    }
+}
+
+// Enforce sequential publishing order after all projects are configured
+gradle.projectsEvaluated {
+	// Define all loaders in publishing order
+	def loaders = [
+		[name: 'neoforge',
+		 publishMods: tasks.findByPath(':neoforge:publishMods'),
+		 curseforge: tasks.findByPath(':neoforge:publishCurseforge'),
+		 modrinth: tasks.findByPath(':neoforge:publishModrinth')],
+
+		[name: 'forge',
+		 publishMods: tasks.findByPath(':forge:publishMods'),
+		 curseforge: tasks.findByPath(':forge:publishCurseforge'),
+		 modrinth: tasks.findByPath(':forge:publishModrinth')],
+
+		[name: 'fabric',
+		 publishMods: tasks.findByPath(':fabric:publishMods'),
+		 curseforge: tasks.findByPath(':fabric:publishCurseforge'),
+		 modrinth: tasks.findByPath(':fabric:publishModrinth')]
+	]
+
+	// Create sequential chain: each loader waits for the previous ACTIVE loader
+	def previousActive = null
+	loaders.each { current ->
+		// Check if this loader is active (has publishMods task)
+		if (current.publishMods) {
+			// If there's a previous active loader, make current wait for it (with delay)
+			if (previousActive) {
+				println "[Publish Order] ${current.name} will wait for ${previousActive.name}"
+
+				// Create a delay task for this loader
+				def delayTaskName = "delayBefore${current.name.capitalize()}Publish"
+				def delayTask = tasks.create(delayTaskName) {
+					dependsOn previousActive.publishMods
+					doLast {
+                        int delaySeconds = 6
+						println "\n${"="*60}"
+						println "Waiting ${delaySeconds} seconds before publishing ${current.name}..."
+						println "This prevents API race conditions from causing wrong upload order"
+						println "${"="*60}"
+						for (int i = delaySeconds; i > 0; i--) {
+							print "${i}... "
+							System.out.flush()
+							Thread.sleep(1000)
+						}
+						println "0\n"
+					}
+				}
+
+				// Main publishMods dependency: wait for delay task
+				current.publishMods.dependsOn(delayTask)
+
+				// Platform task dependencies: also wait for delay task
+				current.curseforge?.dependsOn(delayTask)
+				current.modrinth?.dependsOn(delayTask)
+			}
+			// This loader becomes the new "previous active" for the next iteration
+			previousActive = current
+		}
+	}
+}
+
+//// Clean all subprojects
+//task cleanAll {
+//	group = 'build'
+//	description = 'Cleans all mod loader variants'
+//
+//	dependsOn subprojects.collect { it.tasks.findByName('clean') }.findAll { it != null }
+//}
+
+// Default task
+defaultTasks 'buildAll'

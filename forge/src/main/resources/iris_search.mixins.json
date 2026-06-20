@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "refmap": "iris_search.refmap.json",
+  "package": "com.spaceagle17.irissearch.forge.mixin",
+  "plugin": "com.spaceagle17.irissearch.forge.mixin.IrisSearchMixinPlugin",
+  "mixins": [
+    "OptionMenuContainerMixin"
+  ],
+  "client": [
+    "IrisElementRowMixin",
+    "ScreenAccessor",
+    "ShaderPackOptionListHeaderEntryMixin",
+    "ShaderPackOptionListMixin",
+    "ShaderPackScreenMixin"
+  ],
+  "minVersion": "0.8"
+}

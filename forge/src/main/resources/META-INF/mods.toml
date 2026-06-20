@@ -1,0 +1,40 @@
+modLoader="javafml" #mandatory
+loaderVersion="${loader_version_range}"
+issueTrackerURL="https://euphoriapatches.com/discord"
+license="${mod_license}"
+# A list of mods - how many allowed here is determined by the individual mod loader
+[[mods]] #mandatory
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+# A URL to query for updates for this mod. See the JSON update specification <here>
+#updateJSONURL="http://myurl.me/" #optional
+displayURL="https://github.com/SpacEagle17/IrisSearch" #optional
+logoFile="icon.png" #optional
+#credits="Thanks for this example mod goes to Java" #optional
+authors="${mod_authors}" #optional
+description='''${mod_description}'''
+side="CLIENT"
+clientSideOnly=true
+# A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
+[[dependencies.${mod_id}]] #optional
+modId="forge"
+mandatory=true
+# The version range of the dependency
+versionRange="${forge_version_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="oculus"
+mandatory=true
+versionRange="[0.0,)"
+ordering="NONE"
+side="CLIENT"
