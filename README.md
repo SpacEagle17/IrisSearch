@@ -23,9 +23,24 @@ Tired of clicking through endless pages, and sub-menus just to find a specific t
 
 IrisSearch embeds a search bar right into the shader options GUI. Type what you need, and the menu dynamically filters down to the matching settings!
 
+[![Youtube Video](https://github.com/user-attachments/assets/fa075629-4a4e-48b6-8c27-effac8420b9f)](https://youtu.be/rLCE-IV_fng)
+
 ## Features
 - **In-GUI Search Bar:** Adds a seamlessly integrated text input field directly inside the shader pack options menu.
 - **Translation Support:** Works with localized shader options; you can search using your selected language as long as the shader supports said language :p
 - **No Setup Needed:** Works completely out of the box with zero configuration files to edit.
 - **Loader Compatibility:** Available for Fabric, Forge, and NeoForge.
 - **Version Support:** Compatible from 1.20.1 up to the latest Minecraft versions.
+
+## Links
+* **Support SpacEagle17 on [<ins>Patreon or Kofi</ins>](https://www.euphoriapatches.com/support/)**
+* **Contact:** **https://euphoriapatches.com/contact**
+* **Discord:** **https://www.euphoriapatches.com/discord**
+
+## Sponsored by Ember Host
+Looking for an affordable and reliable Minecraft server host? Ember Host offers incredible value and top-tier support!
+
+Click the banner or use code **[EUPHORIA](https://www.euphoriapatches.com/ember-referral)** at checkout for **10%** off your first purchase. Plus, **70%** of your purchase supports Euphoria Patches!
+
+<a href="https://bit.ly/0932rwjieopf" target="_blank"><img src=https://www.euphoriapatches.com/assets/img/other/ember_host_ep.png></a>
+
