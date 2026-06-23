@@ -97,7 +97,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
         String[] mcClasses  = {"net.minecraft.client.Minecraft", "net.minecraft.src.C_3391_", "net.minecraft.class_310"};
         String[] getInstanceMethods = {"m_91087_", "getInstance", "method_1551"};
         String[] fontFields = {"f_91062_", "font", "field_1772"};
-        String[] widthMethods = {"m_92852_", "m_92895_", "width", "method_1727"};
+        String[] widthMethods = {"m_92852_", "width", "method_27525"};
         for (String mcCls : mcClasses) {
             if (!ReflectionUtils.checkClassExists(mcCls)) continue;
             Object mcInstance = null;

@@ -79,23 +79,8 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
 
     @Unique
     private static int getFontWidth(Object component) {
-        try {
-            String mcClassStr = ReflectionUtils.checkClassExists("net.minecraft.client.Minecraft")
-                    ? "net.minecraft.client.Minecraft" : "net.minecraft.class_310";
-            Object mcInstance = ReflectionUtils.invokeMethod(mcClassStr, "getInstance", null);
-
-            String fontFieldName = ReflectionUtils.checkClassExists("net.minecraft.client.Minecraft")
-                    ? "font" : "field_3772";
-            Object fontRenderer = ReflectionUtils.getFieldValue(mcInstance, fontFieldName);
-
-            String widthMethodName = ReflectionUtils.checkClassExists("net.minecraft.client.Minecraft")
-                    ? "width" : "method_1727";
-
-            Object result = ReflectionUtils.invokeMethod(fontRenderer, widthMethodName, null, component);
-            return result != null ? (int) result : 50;
-        } catch (Exception e) {
-            return 50;
-        }
+        Object font = MinecraftBridge.getMinecraftFont();
+        return MinecraftBridge.getFontWidth(font, component);
     }
 
     @Unique

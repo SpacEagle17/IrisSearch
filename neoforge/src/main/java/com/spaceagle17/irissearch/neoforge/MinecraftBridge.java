@@ -138,7 +138,7 @@ public class MinecraftBridge {
             return 50;
         }
         try {
-            for (String methodName : new String[]{"width", "method_1727"}) {
+            for (String methodName : new String[]{"width", "method_27525"}) {
                 try {
                     Method m = font.getClass().getDeclaredMethod(methodName, component.getClass());
                     m.setAccessible(true);
@@ -150,7 +150,7 @@ public class MinecraftBridge {
                 }
             }
 
-            for (String methodName : new String[]{"width", "method_1727"}) {
+            for (String methodName : new String[]{"width", "method_27525"}) {
                 Method m = findMethodByInterfaceParam(font.getClass(), methodName, component.getClass());
                 if (m != null) {
                     Object result = m.invoke(font, component);
