@@ -59,7 +59,7 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
             debugLog("Captured " + irisSearch$originalMainElements.size() + " original main-screen element(s)");
 
         } catch (Exception e) {
-            IrisSearch.log(3, "Failed to capture original main screen layout.");
+            IrisSearch.log(3, "Failed to capture original main screen layout." + e);
             debugLog("captureOriginalLayout threw: " + e);
         }
     }
@@ -144,7 +144,7 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
             irisSearch$applyFilteredLayout(scoredResults, elementById);
             debugLog("Search query \"" + query + "\" -> " + scoredResults.size() + " match(es)");
         } catch (Exception e) {
-            IrisSearch.log(3, "Failed to apply search query.");
+            IrisSearch.log(3, "Failed to apply search query.: " + e);
             debugLog("setSearchQuery failed for query \"" + query + "\": " + e);
         }
     }

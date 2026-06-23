@@ -111,7 +111,7 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
             }
             this.rebuild();
         } catch (Exception e) {
-            IrisSearch.log(3, "Couldn't update the search results.");
+            IrisSearch.log(3, "Couldn't update the search results." + e);
             debugLog("Failed to update search query \"" + query + "\": " + e);
         }
     }
@@ -126,7 +126,7 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
                 ((ISearchableOptionContainer) this.container).irisSearch$setSearchQuery(null);
             }
         } catch (Exception e) {
-            IrisSearch.log(3, "Couldn't fully exit search mode.");
+            IrisSearch.log(3, "Couldn't fully exit search mode." + e);
             debugLog("Failed to disable search mode: " + e);
         }
     }
@@ -137,7 +137,7 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
         try {
             this.rebuild();
         } catch (Exception e) {
-            IrisSearch.log(3, "Couldn't refresh the option list after closing search.");
+            IrisSearch.log(3, "Couldn't refresh the option list after closing search." + e);
             debugLog("Failed to rebuild after disabling search mode: " + e);
         }
     }
@@ -148,7 +148,7 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
             this.irisSearch$searchModeActive = true;
             this.rebuild();
         } catch (Exception e) {
-            IrisSearch.log(3, "Couldn't enable search mode.");
+            IrisSearch.log(3, "Couldn't enable search mode." + e);
             debugLog("Failed to enable search mode: " + e);
         }
     }

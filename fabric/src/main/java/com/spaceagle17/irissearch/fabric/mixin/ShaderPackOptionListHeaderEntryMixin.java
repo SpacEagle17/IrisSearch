@@ -250,7 +250,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
                 debugLog("No header buttons required on this configuration context.");
             }
         } catch (Exception e) {
-            IrisSearch.log(3, "Couldn't build the search header for one of the shader option screens.");
+            IrisSearch.log(3, "Couldn't build the search header for one of the shader option screens." + e);
             debugLog("Cross-version exception handling header setup: " + e);
         }
     }
@@ -391,7 +391,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
 
             return true;
         } catch (Throwable t) {
-            IrisSearch.log(3, "Header row couldn't render correctly while searching.");
+            IrisSearch.log(3, "Header row couldn't render correctly while searching." + t);
             debugLog("Reflective row suppression failed: " + t);
             return false;
         }

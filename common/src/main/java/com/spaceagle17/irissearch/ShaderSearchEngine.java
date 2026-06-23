@@ -150,6 +150,7 @@ public class ShaderSearchEngine {
             String commentText = getLowercaseTranslatedString("option." + optionId + ".comment");
 
             int score = 0;
+            if (!readableName.isEmpty() && readableName.equals(trimmedQuery))           score |= (1 << 9);
             if (!readableName.isEmpty() && wholeWordPat.matcher(readableName).find())   score |= (1 << 8);
             if (!readableName.isEmpty() && startsWithPat.matcher(readableName).find())  score |= (1 << 7);
             if (wholeWordPat.matcher(rawId).find())                                     score |= (1 << 6);
@@ -179,31 +180,73 @@ public class ShaderSearchEngine {
         return flatList;
     }
 
+    // Bitmask of score bits that come from the readable name (bits 9, 8, 7, 2).
+    // Used to separate "how well does the readable name match" from comment/rawId noise.
+    private static final int READABLE_NAME_BITS = (1 << 9) | (1 << 8) | (1 << 7) | (1 << 2);
+
     public record ScoredOptionElement(String optionId, String readableName, String path, int score, String query) implements Comparable<ScoredOptionElement> {
         @Override
         public int compareTo(ScoredOptionElement other) {
-            // 1. Higher bitmask score wins (descending)
+            String q = this.query != null ? this.query.toLowerCase(Locale.ROOT).trim() : "";
+
+            // 1. Readable-name match quality (bits 9/8/7/2 only).
+            int thisReadable = this.score & READABLE_NAME_BITS;
+            int otherReadable = other.score & READABLE_NAME_BITS;
+            if (thisReadable != otherReadable) {
+                return Integer.compare(otherReadable, thisReadable);
+            }
+            // 2. Sort by matched-word length (shorter word = higher query coverage = more relevant).
+            // Using length guarantees a total order to prevent sort crashes, passing ties to the next step.
+            if (!q.isEmpty()) {
+                String thisWord  = findMatchingWord(this.readableName,  q);
+                String otherWord = findMatchingWord(other.readableName, q);
+                int thisLen  = thisWord  != null ? thisWord.length()  : Integer.MAX_VALUE;
+                int otherLen = otherWord != null ? otherWord.length() : Integer.MAX_VALUE;
+                if (thisLen != otherLen) {
+                    return Integer.compare(thisLen, otherLen);
+                }
+            }
+            // 3. Fewer words in readable name = more precise match.
+            // "Bloom" beats "Bloom Strength" when matched word length ties.
+            int thisWords  = countWords(this.readableName);
+            int otherWords = countWords(other.readableName);
+            if (thisWords != otherWords) {
+                return Integer.compare(thisWords, otherWords);
+            }
+            // 4. Full score (comment/rawId matches as secondary signal).
             if (this.score != other.score) {
                 return Integer.compare(other.score, this.score);
             }
-            // 2. Absolute prefix boost: readableName starts with the query
-            String q = this.query != null ? this.query.toLowerCase(Locale.ROOT).trim() : "";
-            boolean thisPrefixes = !q.isEmpty() && this.readableName != null && this.readableName.startsWith(q);
+            // 5. Prefix boost: readableName starts with the exact query string.
+            boolean thisPrefixes  = !q.isEmpty() && this.readableName  != null && this.readableName.startsWith(q);
             boolean otherPrefixes = !q.isEmpty() && other.readableName != null && other.readableName.startsWith(q);
             if (thisPrefixes != otherPrefixes) {
                 return thisPrefixes ? -1 : 1;
             }
-            // 3. Path depth: fewer slashes (shallower) wins
-            int thisDepth = countSlashes(this.path);
+            // 6. Path depth: fewer slashes (shallower) wins.
+            int thisDepth  = countSlashes(this.path);
             int otherDepth = countSlashes(other.path);
             if (thisDepth != otherDepth) {
                 return Integer.compare(thisDepth, otherDepth);
             }
-            // 4. Alphabetical tie-breaker
+            // 7. Alphabetical tie-breaker.
             if (this.optionId != null && other.optionId != null) {
                 return this.optionId.compareTo(other.optionId);
             }
             return 0;
+        }
+
+        private static String findMatchingWord(String readableName, String query) {
+            if (readableName == null || query.isEmpty()) return null;
+            for (String word : readableName.split("\\s+")) {
+                if (word.startsWith(query)) return word;
+            }
+            return null;
+        }
+
+        private static int countWords(String s) {
+            if (s == null || s.isBlank()) return 0;
+            return s.trim().split("\\s+").length;
         }
 
         private static int countSlashes(String path) {

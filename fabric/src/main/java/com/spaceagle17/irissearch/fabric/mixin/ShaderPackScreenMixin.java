@@ -82,7 +82,7 @@ public class ShaderPackScreenMixin {
                 }
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to add search box during init.");
+            IrisSearch.log(3, "Failed to add search box during init." + t);
             debugLog("Failed to add search box during init: " + t);
         }
     }
@@ -95,7 +95,7 @@ public class ShaderPackScreenMixin {
                 debugLog("Disabled search mode on screen close");
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to disable search mode on close.");
+            IrisSearch.log(3, "Failed to disable search mode on close." + t);
             debugLog("Failed to disable search mode on close: " + t);
         }
     }
@@ -158,7 +158,7 @@ public class ShaderPackScreenMixin {
 
                     s.irisSearch$updateSearchQuery(text);
                 } catch (Throwable t) {
-                    IrisSearch.log(3, "Search box responder failed.");
+                    IrisSearch.log(3, "Search box responder failed." + t);
                     debugLog("Search box responder failed: " + t);
                 }
             };
@@ -173,7 +173,7 @@ public class ShaderPackScreenMixin {
             debugLog("Search box created (active=" + active + ")");
             return box;
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to create search box.");
+            IrisSearch.log(3, "Failed to create search box." + t);
             debugLog("Failed to create search box: " + t);
             return null;
         }
@@ -223,7 +223,7 @@ public class ShaderPackScreenMixin {
             ReflectionUtils.invokeMethod(box, "setWidth", new Class<?>[]{int.class}, boxWidth);
             ReflectionUtils.invokeMethod(box, "setHeight", new Class<?>[]{int.class}, boxHeight);
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't position the search box correctly.");
+            IrisSearch.log(3, "Couldn't position the search box correctly." + t);
             debugLog("Failed to position search box: " + t);
         }
     }
@@ -241,7 +241,7 @@ public class ShaderPackScreenMixin {
                 this.irisSearch$screenSetFocusedMethod.invoke(this, box);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to focus search box.");
+            IrisSearch.log(3, "Failed to focus search box." + t);
             debugLog("Failed to focus search box: " + t);
         }
     }
@@ -256,7 +256,7 @@ public class ShaderPackScreenMixin {
                 this.irisSearch$screenSetFocusedMethod.invoke(this, (Object) null);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to unfocus search box.");
+            IrisSearch.log(3, "Failed to unfocus search box." + t);
             debugLog("Failed to unfocus search box: " + t);
         }
     }
@@ -296,7 +296,7 @@ public class ShaderPackScreenMixin {
                 irisSearch$updateScrollClipping(this.irisSearch$searchBox);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to sync search box visibility.");
+            IrisSearch.log(3, "Failed to sync search box visibility." + t);
             debugLog("Failed to sync search box visibility: " + t);
         }
     }
@@ -312,7 +312,7 @@ public class ShaderPackScreenMixin {
                 irisSearch$positionSearchBox(box);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to update search box scroll clipping.");
+            IrisSearch.log(3, "Failed to update search box scroll clipping." + t);
             debugLog("Failed to update search box scroll clipping: " + t);
         }
     }
@@ -323,7 +323,7 @@ public class ShaderPackScreenMixin {
         try {
             irisSearch$syncSearchBoxVisibility();
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to sync search box during render.");
+            IrisSearch.log(3, "Failed to sync search box during render." + t);
             debugLog("Failed to sync search box during extractRenderState: " + t);
         }
     }
@@ -346,7 +346,7 @@ public class ShaderPackScreenMixin {
                 cir.setReturnValue(true);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to handle key press.");
+            IrisSearch.log(3, "Failed to handle key press." + t);
             debugLog("Failed keyPressed handling: " + t);
         }
     }
@@ -379,7 +379,7 @@ public class ShaderPackScreenMixin {
                 return true;
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to handle search key press.");
+            IrisSearch.log(3, "Failed to handle search key press." + t);
             debugLog("Failed to handle search key press: " + t);
         }
 
@@ -407,7 +407,7 @@ public class ShaderPackScreenMixin {
                 cir.setReturnValue(true);
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to handle mouse click.");
+            IrisSearch.log(3, "Failed to handle mouse click." + t);
             debugLog("Failed mouseClicked handling: " + t);
         }
     }

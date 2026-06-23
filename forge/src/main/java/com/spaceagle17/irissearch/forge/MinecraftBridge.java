@@ -101,7 +101,7 @@ public class MinecraftBridge {
                 }
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't create search-box label text.");
+            IrisSearch.log(3, "Couldn't create search-box label text." + t);
             debugLog("createLiteralComponent failed for \"" + text + "\": " + t);
         }
         return null;
@@ -196,9 +196,9 @@ public class MinecraftBridge {
                         } catch (Throwable ignored) {}
                     }
                 }
-            } catch (Throwable ignored) {
-                IrisSearch.log(3, "Couldn't access the Minecraft client instance.");
-                debugLog("getMinecraftClientInstance failed: " + t);
+            } catch (Throwable t2) {
+                IrisSearch.log(3, "Couldn't access the Minecraft client instance." + t2);
+                debugLog("getMinecraftClientInstance failed: " + t2);
                 return null;
             }
         }
@@ -279,7 +279,7 @@ public class MinecraftBridge {
             Method addMethod = renderQueue.getClass().getMethod("add", Object.class);
             addMethod.invoke(renderQueue, task);
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't show the search button tooltip.");
+            IrisSearch.log(3, "Couldn't show the search button tooltip." + t);
             debugLog("queueHeaderTooltip failed: " + t);
         }
     }

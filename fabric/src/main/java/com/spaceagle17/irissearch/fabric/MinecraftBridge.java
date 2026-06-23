@@ -84,7 +84,7 @@ public class MinecraftBridge {
                 }
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't create search-box label text.");
+            IrisSearch.log(3, "Couldn't create search-box label text." + t);
             debugLog("createLiteralComponent failed for \"" + text + "\": " + t);
         }
         return null;
@@ -117,7 +117,7 @@ public class MinecraftBridge {
                 }
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't measure search button text width; using a fallback size.");
+            IrisSearch.log(3, "Couldn't measure search button text width; using a fallback size." + t);
             debugLog("getFontWidth failed: " + t);
         }
         return 50;
@@ -139,7 +139,7 @@ public class MinecraftBridge {
                 ctor.setAccessible(true);
                 return ctor.newInstance(args);
             } catch (Throwable t) {
-                IrisSearch.log(3, "Couldn't create a " + clazz.getSimpleName() + " instance.");
+                IrisSearch.log(3, "Couldn't create a " + clazz.getSimpleName() + " instance." + t);
                 debugLog("instantiate() found a matching constructor for "
                         + clazz.getName() + " but invocation failed: " + t);
             }
@@ -198,7 +198,7 @@ public class MinecraftBridge {
             m.invoke(target, arg);
             return true;
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't call " + methodName + " on the search box.");
+            IrisSearch.log(3, "Couldn't call " + methodName + " on the search box." + t);
             debugLog("invokeWithInterfaceParam failed calling " + methodName + ": " + t);
             return false;
         }
@@ -276,7 +276,7 @@ public class MinecraftBridge {
                     }
                 }
             } catch (Throwable ignored) {
-                IrisSearch.log(3, "Couldn't access the Minecraft client instance.");
+                IrisSearch.log(3, "Couldn't access the Minecraft client instance." + t);
                 debugLog("getMinecraftClientInstance failed: " + t);
                 return null;
             }
@@ -304,7 +304,7 @@ public class MinecraftBridge {
             }
             return false;
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't check whether Ctrl is held.");
+            IrisSearch.log(3, "Couldn't check whether Ctrl is held." + t);
             debugLog("isControlDown failed: " + t);
             return false;
         }
@@ -381,7 +381,7 @@ public class MinecraftBridge {
             Method addMethod = renderQueue.getClass().getMethod("add", Object.class);
             addMethod.invoke(renderQueue, task);
         } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't show the search button tooltip.");
+            IrisSearch.log(3, "Couldn't show the search button tooltip." + t);
             debugLog("queueHeaderTooltip failed: " + t);
         }
     }

@@ -74,11 +74,12 @@ public class BaseOptionElementWidgetMixin {
             for (String segment : segments) {
                 if ("root".equals(segment)) continue;
                 String translated = ShaderSearchEngine.getDisplaySettingsName(segment).replaceAll("\\s+>", "");
-                irisSearch$debugLog("Translating segment '" + segment + "' to '" + translated + "'");
                 String label = translated.isEmpty() ? segment : translated;
                 if (!display.isEmpty()) display.append(" > ");
                 display.append(label);
             }
+
+            irisSearch$debugLog("Final translated path" + (display.isEmpty() ? " (empty)" : ": " + display.toString()));
 
             return !display.isEmpty() ? display.toString() : null;
         } catch (Throwable t) {

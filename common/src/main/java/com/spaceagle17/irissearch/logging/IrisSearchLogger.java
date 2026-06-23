@@ -37,10 +37,10 @@ public class IrisSearchLogger {
         if (shouldSuppressMessage(message)) {
             return;
         }
-        String loggingMessage = "IrisSearch: " + message;
-        if (messageLevel == -1) loggingMessage = "\n \n" + loggingMessage + "\n\n ";
 
+        String loggingMessage = message;
         if (messageLevel == 3) loggingMessage = "Report this issue on GitHub or Discord: https://github.com/SpacEagle17/IrisSearch/issues | https://www.euphoriapatches.com/discord: " + loggingMessage;
+        loggingMessage = "IrisSearch: " + loggingMessage;
 
         switch (messageLevel) {
             case 0:

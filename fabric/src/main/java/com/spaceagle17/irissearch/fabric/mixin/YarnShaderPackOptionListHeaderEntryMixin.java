@@ -79,13 +79,13 @@ public abstract class YarnShaderPackOptionListHeaderEntryMixin {
                 MinecraftBridge.queueHeaderTooltip(guiGraphics, entry.irisSearch$getSearchToggleButton(),
                         entry.irisSearch$getSearchToggleTooltipText(), x, y - 16);
             } catch (Throwable t) {
-                IrisSearch.log(3, "Couldn't show the search button tooltip while searching.");
+                IrisSearch.log(3, "Couldn't show the search button tooltip while searching." + t);
                 debugLog("Failed queueing tooltip from suppressed render path: " + t);
             }
 
             return true;
         } catch (Throwable t) {
-            IrisSearch.log(3, "Header row couldn't render correctly while searching.");
+            IrisSearch.log(3, "Header row couldn't render correctly while searching." + t);
             debugLog("Failed to suppress header row rendering during search: " + t);
             return false;
         }

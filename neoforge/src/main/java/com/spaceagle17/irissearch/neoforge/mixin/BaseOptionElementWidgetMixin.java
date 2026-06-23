@@ -62,6 +62,8 @@ public class BaseOptionElementWidgetMixin {
                 display.append(label);
             }
 
+            irisSearch$debugLog("Final translated path" + (display.isEmpty() ? " (empty)" : ": " + display.toString()));
+
             return !display.isEmpty() ? display.toString() : null;
         } catch (Throwable t) {
             irisSearch$debugLog("buildTranslatedPath failed: " + t);
