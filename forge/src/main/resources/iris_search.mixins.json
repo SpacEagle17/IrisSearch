@@ -4,6 +4,7 @@
   "package": "com.spaceagle17.irissearch.forge.mixin",
   "plugin": "com.spaceagle17.irissearch.forge.mixin.IrisSearchMixinPlugin",
   "mixins": [
+    "BaseOptionElementWidgetMixin",
     "OptionMenuContainerMixin"
   ],
   "client": [

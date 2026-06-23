@@ -85,6 +85,23 @@ public class ShaderSearchEngine {
         }
     }
 
+    private static String getColorStrippedString(String key) {
+        if (reflectionFailed) return "";
+        try {
+            boolean hasKey = (boolean) hasMethod.invoke(languageInstance, key);
+            if (!hasKey) return "";
+            Object result = getOrDefaultMethod.invoke(languageInstance, key);
+            if (!(result instanceof String)) return "";
+            return COLOR_CODE_PATTERN.matcher((String) result).replaceAll("");
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
+    public static String getDisplaySettingsName(String screenId) {
+        return getColorStrippedString("screen." + screenId);
+    }
+
     private static String getLowercaseTranslatedString(String key) {
         if (reflectionFailed) return "";
         try {

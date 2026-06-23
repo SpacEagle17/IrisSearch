@@ -3,6 +3,7 @@
   "package": "com.spaceagle17.irissearch.fabric.mixin",
   "plugin": "com.spaceagle17.irissearch.fabric.mixin.IrisSearchMixinPlugin",
   "mixins": [
+    "BaseOptionElementWidgetMixin",
     "IrisElementRowMixin",
     "OptionMenuContainerMixin"
   ],

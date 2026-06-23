@@ -3,6 +3,7 @@
   "package": "com.spaceagle17.irissearch.neoforge.mixin",
   "plugin": "com.spaceagle17.irissearch.neoforge.mixin.IrisSearchMixinPlugin",
   "mixins": [
+    "BaseOptionElementWidgetMixin",
     "OptionMenuContainerMixin"
   ],
   "client": [

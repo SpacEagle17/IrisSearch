@@ -103,8 +103,8 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
         }
     }
 
-    @Unique
-    private String irisSearch$getOptionPath(String targetOptionId) {
+    @Override
+    public String irisSearch$getOptionPath(String targetOptionId) {
         if (targetOptionId == null) return "unknown";
         return irisSearch$cachedOptionPaths.getOrDefault(targetOptionId, "root");
     }
