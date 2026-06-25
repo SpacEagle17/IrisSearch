@@ -134,7 +134,7 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
                 path = irisSearch$getOptionPath(optionId);
                 int score = ShaderSearchEngine.computeMatchTier(optionId, normalizedQuery);
                 if (score > 0) {
-                    scoredResults.add(new ShaderSearchEngine.ScoredOptionElement(optionId, ShaderSearchEngine.getReadableName(optionId), path, score, normalizedQuery));
+                    scoredResults.add(new ShaderSearchEngine.ScoredOptionElement(optionId, ShaderSearchEngine.getReadableTranslatedName(optionId), ShaderSearchEngine.getReadableDefaultName(optionId), path, score, normalizedQuery));
                 }
             }
 
