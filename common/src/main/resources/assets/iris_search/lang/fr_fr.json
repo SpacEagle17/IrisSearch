@@ -1,0 +1,7 @@
+{
+  "iris_search.button.search": "Rechercher",
+  "iris_search.button.clear": "Effacer",
+  "iris_search.tooltip.search": "Rechercher dans les paramètres de shaders (Ctrl + F)",
+  "iris_search.tooltip.clear": "Quitter la recherche de shaders (Échap)",
+  "iris_search.search.hint": "Rechercher des options..."
+}
