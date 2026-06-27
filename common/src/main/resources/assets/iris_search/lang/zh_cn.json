@@ -3,5 +3,5 @@
   "iris_search.button.clear": "清除搜索栏",
   "iris_search.tooltip.search": "搜索光影包设定 (Ctrl + F)",
   "iris_search.tooltip.clear": "退出搜索 (Esc)",
-  "iris_search.search.hint": "搜索选项"
+  "iris_search.search.hint": "搜索设定..."
 }
