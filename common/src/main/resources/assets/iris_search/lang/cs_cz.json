@@ -1,0 +1,7 @@
+{
+  "iris_search.button.search": "Hledat",
+  "iris_search.button.clear": "Ukončit",
+  "iris_search.tooltip.search": "Vyhledávat nastavení shaderu (Ctrl + F)",
+  "iris_search.tooltip.clear": "Ukončit vyhledávání shaderu (Esc)",
+  "iris_search.search.hint": "Vyhledávat nastavení…"
+}
