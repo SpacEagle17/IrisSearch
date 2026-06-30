@@ -152,4 +152,24 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
             irisSearch$debugLog("Failed to enable search mode: " + e);
         }
     }
+
+    @Override
+    public void irisSearch$restoreSearchState(boolean active, String query, int cursor) {
+        this.irisSearch$searchModeActive = active;
+        this.irisSearch$typedSearchQuery = query != null ? query : "";
+        this.irisSearch$savedCursorPosition = Math.max(0, cursor);
+        if (active && this.container != null) {
+            try {
+                ((ISearchableOptionContainer) this.container).irisSearch$setSearchQuery(this.irisSearch$typedSearchQuery);
+            } catch (Exception e) {
+                irisSearch$debugLog("Failed to apply restored query to container: " + e);
+            }
+        }
+        try {
+            this.rebuild();
+        } catch (Exception e) {
+            IrisSearch.log(3, "Couldn't rebuild after restoring search state." + e);
+            irisSearch$debugLog("Failed to rebuild after restoring search state: " + e);
+        }
+    }
 }

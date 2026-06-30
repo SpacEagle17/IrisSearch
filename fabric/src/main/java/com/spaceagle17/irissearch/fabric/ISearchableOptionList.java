@@ -34,4 +34,6 @@ public interface ISearchableOptionList {
     boolean irisSearch$headerRowUsesGetterShape();
     /** True when the option list is currently showing a sub-screen. Ctrl+F search activation is blocked while navigated into a sub-screen. */
     boolean irisSearch$isOnSubScreen();
+    /** Atomically restores search state (flag + query + container filter) and triggers one rebuild. Used to preserve search across screen re-initializations. */
+    void irisSearch$restoreSearchState(boolean active, String query, int cursor);
 }

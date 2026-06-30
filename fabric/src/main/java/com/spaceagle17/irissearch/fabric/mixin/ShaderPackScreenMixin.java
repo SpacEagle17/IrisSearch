@@ -2,14 +2,11 @@ package com.spaceagle17.irissearch.fabric.mixin;
 
 import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
-import com.spaceagle17.irissearch.fabric.ISearchableOptionContainer;
 import com.spaceagle17.irissearch.fabric.ISearchableOptionList;
 import com.spaceagle17.irissearch.fabric.MinecraftBridge;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
-import net.irisshaders.iris.Iris;
 import net.irisshaders.iris.gui.GuiUtil;
 import net.irisshaders.iris.gui.element.ShaderPackOptionList;
-import net.irisshaders.iris.shaderpack.ShaderPack;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
@@ -53,8 +50,46 @@ public class ShaderPackScreenMixin {
     private static final int OFFSCREEN_Y = -10000;
 
     @Unique
+    private boolean irisSearch$preservedSearchMode = false;
+
+    @Unique
+    private String irisSearch$preservedSearchQuery = "";
+
+    @Unique
+    private int irisSearch$preservedCursorPosition = 0;
+
+    // True after any init() where optionMenuOpen was true. Used to gate state saving in the
+    // next HEAD so that the pack-selection list (which always has active=false) cannot
+    // overwrite a preserved active=true from the options list.
+    @Unique
+    private boolean irisSearch$optionsViewWasActive = false;
+
+    @Unique
     private static void debugLog(String message) {
         IrisSearchLogger.debugLog("[ShaderPackScreenMixin] " + message);
+    }
+
+    @Inject(method = "init", at = @At("HEAD"), require = 0, remap = false)
+    private void irisSearch$onInitHead(CallbackInfo ci) {
+        try {
+            if (this.irisSearch$optionsViewWasActive && this.shaderOptionList != null) {
+                ISearchableOptionList old = (ISearchableOptionList) this.shaderOptionList;
+                String q = old.irisSearch$getTypedSearchQuery();
+                this.irisSearch$preservedSearchMode = old.irisSearch$isSearchModeActive() && !q.isEmpty();
+                this.irisSearch$preservedSearchQuery = q;
+                this.irisSearch$preservedCursorPosition = old.irisSearch$getSavedCursorPosition();
+                debugLog("Preserved from options view: active=" + this.irisSearch$preservedSearchMode + " query=\"" + q + "\"");
+            } else if (this.shaderOptionList == null && IrisSearch.pendingSearchRestore) {
+                this.irisSearch$preservedSearchMode = true;
+                this.irisSearch$preservedSearchQuery = IrisSearch.pendingSearchQuery;
+                this.irisSearch$preservedCursorPosition = IrisSearch.pendingSearchCursor;
+                debugLog("Loaded from static (new instance): query=\"" + IrisSearch.pendingSearchQuery + "\"");
+            } else {
+                debugLog("Skipped save (optionsViewWasActive=" + this.irisSearch$optionsViewWasActive + " listNull=" + (this.shaderOptionList == null) + " pending=" + IrisSearch.pendingSearchRestore + ")");
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to preserve search state: " + t);
+        }
     }
 
     @Inject(method = "init", at = @At("TAIL"), require = 0)
@@ -63,13 +98,15 @@ public class ShaderPackScreenMixin {
             this.irisSearch$searchBox = null;
             this.irisSearch$screenSetFocusedMethod = null;
 
-            Iris.getCurrentPack().ifPresent((ShaderPack pack) -> {
-                Object container = pack.getMenuContainer();
-                if (container instanceof ISearchableOptionContainer) {
-                    ((ISearchableOptionContainer) container).irisSearch$setSearchQuery(null);
-                    debugLog("Reset search container query during init()");
+            if (this.irisSearch$preservedSearchMode && this.optionMenuOpen && this.shaderOptionList != null) {
+                try {
+                    ((ISearchableOptionList) this.shaderOptionList).irisSearch$restoreSearchState(
+                            true, this.irisSearch$preservedSearchQuery, this.irisSearch$preservedCursorPosition);
+                    debugLog("Restored search state: query=\"" + this.irisSearch$preservedSearchQuery + "\"");
+                } catch (Throwable t) {
+                    debugLog("Failed to restore search state: " + t);
                 }
-            });
+            }
 
             if (!this.guiHidden && this.optionMenuOpen && this.shaderOptionList != null) {
                 this.irisSearch$searchBox = irisSearch$createSearchBox();
@@ -81,6 +118,9 @@ public class ShaderPackScreenMixin {
                     debugLog("Search box creation failed during init()");
                 }
             }
+
+            this.irisSearch$optionsViewWasActive = this.optionMenuOpen;
+            debugLog("optionsViewWasActive=" + this.irisSearch$optionsViewWasActive);
         } catch (Throwable t) {
             IrisSearch.log(3, "Failed to add search box during init." + t);
             debugLog("Failed to add search box during init: " + t);
@@ -90,13 +130,22 @@ public class ShaderPackScreenMixin {
     @Inject(method = "onClose", at = @At("HEAD"), require = 0)
     private void irisSearch$onCloseDisableSearch(CallbackInfo ci) {
         try {
-            if (this.shaderOptionList != null) {
-                ((ISearchableOptionList) this.shaderOptionList).irisSearch$disableSearchModeAndRebuild();
-                debugLog("Disabled search mode on screen close");
+            if (this.optionMenuOpen && this.shaderOptionList != null) {
+                ISearchableOptionList s = (ISearchableOptionList) this.shaderOptionList;
+                String q = s.irisSearch$getTypedSearchQuery();
+                IrisSearch.pendingSearchRestore = s.irisSearch$isSearchModeActive() && !q.isEmpty();
+                IrisSearch.pendingSearchQuery = q;
+                IrisSearch.pendingSearchCursor = s.irisSearch$getSavedCursorPosition();
+                debugLog("onClose: saved pending state active=" + IrisSearch.pendingSearchRestore + " query=\"" + q + "\"");
+            } else {
+                IrisSearch.pendingSearchRestore = false;
+                IrisSearch.pendingSearchQuery = "";
+                IrisSearch.pendingSearchCursor = 0;
+                debugLog("onClose: cleared pending state (optionMenuOpen=" + this.optionMenuOpen + ")");
             }
         } catch (Throwable t) {
-            IrisSearch.log(3, "Failed to disable search mode on close." + t);
-            debugLog("Failed to disable search mode on close: " + t);
+            IrisSearch.log(3, "Failed to save search state on close." + t);
+            debugLog("Failed to save search state on close: " + t);
         }
     }
 
@@ -383,6 +432,24 @@ public class ShaderPackScreenMixin {
         }
 
         return false;
+    }
+
+    @Inject(method = "refreshForChangedPack", at = @At("TAIL"), require = 0)
+    private void irisSearch$onRefreshForChangedPack(CallbackInfo ci) {
+        try {
+            if (this.shaderOptionList != null) {
+                ISearchableOptionList list = (ISearchableOptionList) this.shaderOptionList;
+                if (list.irisSearch$isSearchModeActive()) {
+                    String query = list.irisSearch$getTypedSearchQuery();
+                    if (!query.isEmpty()) {
+                        list.irisSearch$updateSearchQuery(query);
+                        debugLog("Re-applied search filter after pack refresh: \"" + query + "\"");
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to re-apply search after pack refresh: " + t);
+        }
     }
 
     @Dynamic
