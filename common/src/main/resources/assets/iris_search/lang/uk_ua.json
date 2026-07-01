@@ -1,0 +1,9 @@
+{
+  "iris_search.button.search": "Знайти",
+  "iris_search.button.clear": "Очистити",
+  "iris_search.tooltip.search": "Знайти налаштування шейдерів (Ctrl + F)",
+  "iris_search.tooltip.clear": "Вийти з пошуку шейдерів (Esc)",
+  "iris_search.search.hint": "Знайти налаштування…",
+  "fml.menu.mods.info.description.iris_search": "Мод, що додає поле пошуку до мода Iris.",
+  "fml.menu.mods.info.description.iris_search": "Мод, що додає поле пошуку до мода Iris."
+}
