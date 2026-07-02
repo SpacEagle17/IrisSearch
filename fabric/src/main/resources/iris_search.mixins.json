@@ -12,6 +12,7 @@
     "ShaderPackOptionListHeaderEntryMixin",
     "ShaderPackOptionListMixin",
     "ShaderPackScreenMixin",
+    "ShaderPackSelectionListMixin",
     "YarnShaderPackOptionListHeaderEntryMixin",
     "YarnShaderPackScreenMixin"
   ]

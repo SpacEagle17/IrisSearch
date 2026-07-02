@@ -41,5 +41,4 @@ replay_*.log
 *.patch
 /layout.json
 CHANGELOG.md
-shaderpacks/
-dummy/
+externalSources/

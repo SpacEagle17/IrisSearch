@@ -3,5 +3,7 @@
   "iris_search.button.clear": "Clear",
   "iris_search.tooltip.search": "Search Shader Settings (Ctrl + F)",
   "iris_search.tooltip.clear": "Exit Shader Search (Esc)",
-  "iris_search.search.hint": "Search options..."
+  "iris_search.search.hint": "Search Options...",
+  "iris_search.search.pack_hint": "Search Shader Packs...",
+  "iris_search.search.no_results": "No Shader Pack matches your search"
 }

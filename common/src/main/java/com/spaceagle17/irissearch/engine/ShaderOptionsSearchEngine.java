@@ -1,5 +1,7 @@
-package com.spaceagle17.irissearch;
+package com.spaceagle17.irissearch.engine;
 
+import com.spaceagle17.irissearch.IrisSearch;
+import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,7 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-public class ShaderSearchEngine {
+public class ShaderOptionsSearchEngine {
     private static final String WHOLE_WORD_REGEX = "(?<=^|[^a-zA-Z0-9])%s(?=$|[^a-zA-Z0-9])";
     private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
     private static final Pattern COLOR_CODE_PATTERN = Pattern.compile("§.");
@@ -194,7 +196,7 @@ public class ShaderSearchEngine {
     }
 
     private static void debugLog(String message) {
-        IrisSearchLogger.debugLog("[ShaderSearchEngine] " + message);
+        IrisSearchLogger.debugLog("[ShaderOptionsSearchEngine] " + message);
     }
 
     static {

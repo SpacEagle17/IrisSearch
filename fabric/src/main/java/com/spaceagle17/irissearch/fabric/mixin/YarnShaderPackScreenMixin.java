@@ -3,10 +3,12 @@ package com.spaceagle17.irissearch.fabric.mixin;
 import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.fabric.ISearchableOptionList;
+import com.spaceagle17.irissearch.fabric.ISearchablePackList;
 import com.spaceagle17.irissearch.fabric.MinecraftBridge;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import net.irisshaders.iris.gui.GuiUtil;
 import net.irisshaders.iris.gui.element.ShaderPackOptionList;
+import net.irisshaders.iris.gui.element.ShaderPackSelectionList;
 import net.irisshaders.iris.gui.screen.ShaderPackScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -35,6 +37,9 @@ public abstract class YarnShaderPackScreenMixin {
     private ShaderPackOptionList shaderOptionList;
 
     @Shadow
+    private ShaderPackSelectionList shaderPackList;
+
+    @Shadow
     private boolean optionMenuOpen;
 
     @Shadow
@@ -42,6 +47,9 @@ public abstract class YarnShaderPackScreenMixin {
 
     @Unique
     private EditBox irisSearch$searchBox;
+
+    @Unique
+    private EditBox irisSearch$packSearchBox;
 
     // Moves the search box off-screen when the list is scrolled so it doesn't float above content.
     @Unique
@@ -128,6 +136,24 @@ public abstract class YarnShaderPackScreenMixin {
         } catch (Throwable t) {
             debugLog("Failed to add search box during init: " + t);
         }
+
+        try {
+            this.irisSearch$packSearchBox = null;
+
+            if (!this.guiHidden && !this.optionMenuOpen && this.shaderPackList != null) {
+                irisSearch$reserveHeaderSpaceForPackList();
+                this.irisSearch$packSearchBox = irisSearch$createPackSearchBox();
+
+                if (this.irisSearch$packSearchBox != null) {
+                    irisSearch$accessor().irisSearch$invokeAddRenderableWidget(this.irisSearch$packSearchBox);
+                    debugLog("Pack search box created during init() and added to renderables");
+                } else {
+                    debugLog("Pack search box creation failed during init()");
+                }
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to add pack search box during init: " + t);
+        }
     }
 
     @Inject(method = "onClose", at = @At("HEAD"), require = 0)
@@ -196,6 +222,177 @@ public abstract class YarnShaderPackScreenMixin {
         } catch (Throwable t) {
             debugLog("Failed to create search box: " + t);
             return null;
+        }
+    }
+
+    @Unique
+    private EditBox irisSearch$createPackSearchBox() {
+        if (this.shaderPackList == null) {
+            return null;
+        }
+
+        try {
+            EditBox box = new EditBox(irisSearch$accessor().irisSearch$getFont(), 0, 0, 10, 14, Component.translatable("iris_search.search.pack_hint"));
+            box.setMaxLength(64);
+            box.setBordered(true);
+            box.setHint(Component.translatable("iris_search.search.pack_hint")
+                    .withStyle(Style.EMPTY.applyFormats(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
+
+            irisSearch$positionPackSearchBox(box);
+
+            ISearchablePackList searchable = (ISearchablePackList) this.shaderPackList;
+            String savedQuery = searchable.irisSearch$getTypedSearchQuery();
+            box.setValue(savedQuery);
+            box.setCursorPosition(Math.min(searchable.irisSearch$getSavedCursorPosition(), savedQuery.length()));
+
+            box.setResponder(text -> {
+                try {
+                    if (this.shaderPackList == null) {
+                        return;
+                    }
+                    ISearchablePackList s = (ISearchablePackList) this.shaderPackList;
+                    s.irisSearch$setTypedSearchQuery(text);
+                    s.irisSearch$setSavedCursorPosition(box.getCursorPosition());
+                    s.irisSearch$updateSearchQuery(text);
+                    irisSearch$resetPackListScroll();
+                } catch (Throwable t) {
+                    debugLog("Pack search box responder failed: " + t);
+                }
+            });
+
+            debugLog("Pack search box created");
+            return box;
+        } catch (Throwable t) {
+            debugLog("Failed to create pack search box: " + t);
+            return null;
+        }
+    }
+
+    // centerScrollOn (called by refresh()) no-ops if the previously selected pack isn't in the filtered
+    // results, leaving a stale scroll offset that can scroll new results out of view. Force it back to top.
+    @Unique
+    private void irisSearch$resetPackListScroll() {
+        for (String name : new String[]{"method_44382", "method_25307"}) {
+            try {
+                ReflectionUtils.invokeMethod(this.shaderPackList, name, new Class<?>[]{double.class}, 0.0);
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+        debugLog("Could not resolve setScrollAmount(double) on shaderPackList; scroll reset skipped this call");
+    }
+
+    @Unique
+    private void irisSearch$reserveHeaderSpaceForPackList() {
+        if (this.shaderPackList == null) {
+            return;
+        }
+        try {
+            ISearchablePackList searchable = (ISearchablePackList) this.shaderPackList;
+            int reservedHeight = searchable.irisSearch$getReservedHeaderHeight();
+            int targetY = searchable.irisSearch$getListTop() + reservedHeight;
+            int targetHeight = Math.max(20, searchable.irisSearch$getListBottom() - reservedHeight);
+
+            try {
+                this.shaderPackList.setY(targetY);
+                this.shaderPackList.setHeight(targetHeight);
+                try {
+                    this.shaderPackList.refresh();
+                } catch (Throwable ignored) {
+                }
+            } catch (Throwable t) { // This is for 1.20.1 ewwww
+                debugLog("setY()/setHeight() unavailable: " + t);
+                int rawTargetTop = (searchable.irisSearch$getListTop() - 4) + reservedHeight;
+                boolean applied = ReflectionUtils.setFieldValue(this.shaderPackList, "field_19085", rawTargetTop);
+                debugLog("Field write for list top (field_19085 -> " + rawTargetTop + "): applied=" + applied);
+            }
+            debugLog("Reserved header space above pack list: y=" + targetY + " height=" + targetHeight);
+        } catch (Throwable t) {
+            debugLog("Could not reserve header space for pack list: " + t);
+        }
+    }
+
+    @Unique
+    private void irisSearch$positionPackSearchBox(EditBox box) {
+        if (this.shaderPackList == null || box == null) {
+            return;
+        }
+
+        try {
+            ISearchablePackList searchable = (ISearchablePackList) this.shaderPackList;
+            int reservedHeight = searchable.irisSearch$getReservedHeaderHeight();
+            int rowWidth = irisSearch$liveOrCachedPackRowWidth();
+            int listX = irisSearch$liveOrCachedPackX();
+            int listWidth = irisSearch$liveOrCachedPackWidth();
+
+            final int padding = 3;
+            int boxHeight = Math.max(10, reservedHeight - padding * 2);
+            int rowX = listX + (listWidth - rowWidth) / 2;
+            int boxY = searchable.irisSearch$getListTop() + padding;
+
+            try { box.setX(rowX); } catch (Throwable t) { debugLog("Failed to set pack search box X position: " + t); }
+            try { box.setY(boxY); } catch (Throwable t) { debugLog("Failed to set pack search box Y position: " + t); }
+            try { box.setWidth(rowWidth); } catch (Throwable t) { debugLog("Failed to set pack search box width: " + t); }
+            try {
+                box.setHeight(boxHeight);
+            } catch (Throwable t) { // Again for 1.20.1 ewwwww
+                debugLog("Failed to set pack search box height, falling back to field write: " + t);
+                boolean applied = ReflectionUtils.setFieldValue(box, "field_22759", boxHeight);
+                debugLog("Field write for box height (field_22759): applied=" + applied);
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to position pack search box: " + t);
+        }
+    }
+
+    /** getRowWidth() overrides a vanilla method, so its intermediary id isn't guaranteed to resolve the same way across very different Minecraft generations -- fall back to the value ShaderPackSelectionListMixin computed independently from Iris's own formula. */
+    @Unique
+    private int irisSearch$liveOrCachedPackRowWidth() {
+        try {
+            return this.shaderPackList.getRowWidth();
+        } catch (Throwable t) {
+            return ((ISearchablePackList) this.shaderPackList).irisSearch$getRowWidth();
+        }
+    }
+
+    @Unique
+    private int irisSearch$liveOrCachedPackX() {
+        try {
+            return this.shaderPackList.getX();
+        } catch (Throwable t) {
+            return ((ISearchablePackList) this.shaderPackList).irisSearch$getListLeft();
+        }
+    }
+
+    @Unique
+    private int irisSearch$liveOrCachedPackWidth() {
+        try {
+            return this.shaderPackList.getWidth();
+        } catch (Throwable t) {
+            return ((ISearchablePackList) this.shaderPackList).irisSearch$getListWidth();
+        }
+    }
+
+    @Unique
+    private void irisSearch$syncPackSearchBox() {
+        if (this.irisSearch$packSearchBox == null || this.shaderPackList == null) {
+            return;
+        }
+
+        try {
+            boolean shouldShow = !this.optionMenuOpen && !this.guiHidden;
+            if (shouldShow != this.irisSearch$packSearchBox.isVisible()) {
+                this.irisSearch$packSearchBox.setVisible(shouldShow);
+                if (!shouldShow) {
+                    irisSearch$unfocusSearchBox(this.irisSearch$packSearchBox);
+                }
+            }
+
+            if (shouldShow) {
+                irisSearch$positionPackSearchBox(this.irisSearch$packSearchBox);
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to sync pack search box: " + t);
         }
     }
 
@@ -380,6 +577,11 @@ public abstract class YarnShaderPackScreenMixin {
         } catch (Throwable t) {
             debugLog("Failed to sync search box during render: " + t);
         }
+        try {
+            irisSearch$syncPackSearchBox();
+        } catch (Throwable t) {
+            debugLog("Failed to sync pack search box during render: " + t);
+        }
     }
 
     @Inject(method = "render", at = @At("TAIL"), require = 0)
@@ -391,6 +593,13 @@ public abstract class YarnShaderPackScreenMixin {
         } catch (Throwable t) {
             debugLog("Failed to re-render search box on top: " + t);
         }
+        try {
+            if (this.irisSearch$packSearchBox != null && this.irisSearch$packSearchBox.isVisible()) {
+                this.irisSearch$packSearchBox.render(guiGraphics, mouseX, mouseY, delta);
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to re-render pack search box on top: " + t);
+        }
     }
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, require = 0)
@@ -401,10 +610,50 @@ public abstract class YarnShaderPackScreenMixin {
 
             if (irisSearch$handleSearchKeyPress(keyCode, ctrlDown, isEscape)) {
                 cir.setReturnValue(true);
+                return;
+            }
+            if (irisSearch$handlePackSearchKeyPress(keyCode, ctrlDown, isEscape)) {
+                cir.setReturnValue(true);
             }
         } catch (Throwable t) {
             debugLog("Failed keyPressed handling: " + t);
         }
+    }
+
+    /** Mutually exclusive with irisSearch$handleSearchKeyPress via the !optionMenuOpen guard, since only one of the two search boxes is ever showing at a time. */
+    @Unique
+    private boolean irisSearch$handlePackSearchKeyPress(int key, boolean ctrlDown, boolean isEscapeKey) {
+        if (this.shaderPackList == null || this.optionMenuOpen || this.irisSearch$packSearchBox == null) {
+            return false;
+        }
+
+        try {
+            if (isEscapeKey && this.irisSearch$packSearchBox.isFocused()) {
+                ISearchablePackList searchable = (ISearchablePackList) this.shaderPackList;
+                String query = searchable.irisSearch$getTypedSearchQuery();
+                if (!query.isEmpty()) {
+                    this.irisSearch$packSearchBox.setValue("");
+                    searchable.irisSearch$updateSearchQuery("");
+                    irisSearch$resetPackListScroll();
+                    debugLog("Escape pressed while pack-searching, cleared query");
+                } else {
+                    irisSearch$unfocusSearchBox(this.irisSearch$packSearchBox);
+                    debugLog("Escape pressed while pack-searching, unfocused box");
+                }
+                return true;
+            }
+
+            if (ctrlDown && key == GLFW.GLFW_KEY_F) {
+                GuiUtil.playButtonClickSound();
+                irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
+                debugLog("Ctrl+F focused the pack search box");
+                return true;
+            }
+        } catch (Throwable t) {
+            debugLog("Failed to handle pack search key press: " + t);
+        }
+
+        return false;
     }
 
     @Unique
@@ -462,13 +711,19 @@ public abstract class YarnShaderPackScreenMixin {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, require = 0)
     private void irisSearch$onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         try {
-            if (!this.optionMenuOpen || this.irisSearch$searchBox == null || !this.irisSearch$searchBox.isVisible()) {
-                return;
+            if (this.optionMenuOpen && this.irisSearch$searchBox != null && this.irisSearch$searchBox.isVisible()) {
+                if (this.irisSearch$searchBox.mouseClicked(mouseX, mouseY, button)) {
+                    irisSearch$focusSearchBox(this.irisSearch$searchBox);
+                    cir.setReturnValue(true);
+                    return;
+                }
             }
 
-            if (this.irisSearch$searchBox.mouseClicked(mouseX, mouseY, button)) {
-                irisSearch$focusSearchBox(this.irisSearch$searchBox);
-                cir.setReturnValue(true);
+            if (!this.optionMenuOpen && this.irisSearch$packSearchBox != null && this.irisSearch$packSearchBox.isVisible()) {
+                if (this.irisSearch$packSearchBox.mouseClicked(mouseX, mouseY, button)) {
+                    irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
+                    cir.setReturnValue(true);
+                }
             }
         } catch (Throwable t) {
             debugLog("Failed mouseClicked handling: " + t);
