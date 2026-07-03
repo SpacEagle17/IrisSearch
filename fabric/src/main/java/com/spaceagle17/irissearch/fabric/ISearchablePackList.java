@@ -12,4 +12,5 @@ public interface ISearchablePackList {
     int irisSearch$getListWidth();
     int irisSearch$getListBottom();
     int irisSearch$getRowWidth();
+    boolean irisSearch$shouldShowSearchBar();
 }

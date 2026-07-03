@@ -135,7 +135,8 @@ public class ShaderPackScreenMixin {
         try {
             this.irisSearch$packSearchBox = null;
 
-            if (!this.guiHidden && !this.optionMenuOpen && this.shaderPackList != null) {
+            if (!this.guiHidden && !this.optionMenuOpen && this.shaderPackList != null
+                    && ((ISearchablePackList) this.shaderPackList).irisSearch$shouldShowSearchBar()) {
                 irisSearch$reserveHeaderSpaceForPackList();
                 this.irisSearch$packSearchBox = irisSearch$createPackSearchBox();
 

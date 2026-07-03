@@ -21,4 +21,5 @@ public interface ISearchablePackList {
 
     // Computed locally (not by calling the live override)—published Oculus jar has overrides SRG-named.
     int irisSearch$getRowWidth();
+    boolean irisSearch$shouldShowSearchBar();
 }

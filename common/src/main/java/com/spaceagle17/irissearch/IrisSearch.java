@@ -20,6 +20,9 @@ public class IrisSearch {
     public static String pendingSearchQuery = "";
     public static int pendingSearchCursor = 0;
 
+    // Minimum number of shaders needed for the search bar to show in the shader selection menu
+    public static final int MIN_PACKS_FOR_PACK_SEARCH_BAR = 6;
+
     public IrisSearch() {
         instance = this;
 

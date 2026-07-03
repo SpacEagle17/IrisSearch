@@ -34,6 +34,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     @Unique private String irisSearch$typedSearchQuery = "";
     @Unique private int irisSearch$savedCursorPosition = 0;
     @Unique private boolean irisSearch$lastFilterHadNoMatches = false;
+    @Unique private int irisSearch$packCount = 0;
 
     @Unique
     private static void debugLog(String message) {
@@ -71,6 +72,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     @Override public int irisSearch$getListTop() { return irisSearch$getIntField(this, "y0", "f_93390_"); }
     @Override public int irisSearch$getListWidth() { return irisSearch$getIntField(this, "x1", "f_93392_") - irisSearch$getIntField(this, "x0", "f_93393_"); }
     @Override public int irisSearch$getRowWidth() { return Math.min(308, irisSearch$getIntField(this, "width", "f_93388_") - 50); }
+    @Override public boolean irisSearch$shouldShowSearchBar() { return this.irisSearch$packCount >= IrisSearch.MIN_PACKS_FOR_PACK_SEARCH_BAR; }
 
     @Override
     public void irisSearch$setListTop(int top) {
@@ -94,11 +96,15 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     @Redirect(method = "refresh", at = @At(value = "INVOKE", target = "Ljava/util/List;iterator()Ljava/util/Iterator;"), require = 0, remap = false)
     private Iterator<String> irisSearch$filterNamesForIteration(List<String> names) {
         try {
+            this.irisSearch$packCount = names.size();
+
             String query = this.irisSearch$typedSearchQuery.trim().toLowerCase(Locale.ROOT);
             if (query.isEmpty()) {
                 this.irisSearch$lastFilterHadNoMatches = false;
                 return names.iterator();
             }
+
+            debugLog("Filtering pack list with query \"" + query + "\" (original size: " + names.size() + ")");
 
             List<ShaderPackSearchEngine.ScoredPackElement> scored = new ArrayList<>();
             for (String name : names) {
