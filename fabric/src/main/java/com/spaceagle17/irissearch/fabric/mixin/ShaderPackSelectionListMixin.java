@@ -127,7 +127,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
             for (String name : names) {
                 int score = ShaderPackSearchEngine.computeMatchTier(name, query);
                 if (score > 0) {
-                    scored.add(new ShaderPackSearchEngine.ScoredPackElement(name, score, query));
+                    scored.add(ShaderPackSearchEngine.ScoredPackElement.of(name, score, query));
                 }
             }
             scored.sort(null);

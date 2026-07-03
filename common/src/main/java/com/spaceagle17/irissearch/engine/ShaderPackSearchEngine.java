@@ -11,8 +11,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ShaderPackSearchEngine {
-    private static final String WHOLE_WORD_REGEX = "(?<=^|[^a-zA-Z0-9])%s(?=$|[^a-zA-Z0-9])";
-    private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
     private static final Pattern COLOR_CODE_PATTERN = Pattern.compile("§.");
     private static final Pattern ZIP_EXTENSION_PATTERN = Pattern.compile("\\.zip$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+(?:\\.\\d+){0,3}");
@@ -26,6 +24,9 @@ public class ShaderPackSearchEngine {
 
     private static final Pattern COMPLEMENTARY_REIMAGINED_PATTERN = Pattern.compile("complementaryreimagined");
     private static final Pattern COMPLEMENTARY_UNBOUND_PATTERN = Pattern.compile("complementaryunbound");
+
+    // Matches a trailing version marker like " v", " r", " -v", " _r", etc. (with optional whitespace and underscores).
+    private static final Pattern TRAILING_VERSION_MARKER_PATTERN = Pattern.compile("(?:[\\s_-]+[vr])?[\\s_-]*$");
 
     /** Computes the match tier for a given shader pack name and query. Higher is better; 0 means no match. */
     public static int computeMatchTier(String packName, String query) {
@@ -43,15 +44,32 @@ public class ShaderPackSearchEngine {
                 return readableName.startsWith(trimmedQuery) ? 1 : 0;
             }
 
-            String escapedQuery = Pattern.quote(trimmedQuery);
-            Pattern wholeWordPat = Pattern.compile(String.format(WHOLE_WORD_REGEX, escapedQuery));
-            Pattern startsWithPat = Pattern.compile(String.format(STARTS_WITH_REGEX, escapedQuery));
-
             int score = 0;
-            if (readableName.equals(trimmedQuery))           score |= (1 << 4);
-            if (wholeWordPat.matcher(readableName).find())   score |= (1 << 3);
-            if (startsWithPat.matcher(readableName).find())  score |= (1 << 2);
-            if (readableName.contains(trimmedQuery))         score |= (1 << 1);
+            if (readableName.equals(trimmedQuery)) score |= (1 << 4);
+
+            // Scan every occurrence for word-boundary matches, a query that
+            // sits mid-word at its first occurrence but starts/ends a word at a later one still counts.
+            int qLen = trimmedQuery.length();
+            int idx = readableName.indexOf(trimmedQuery);
+            if (idx != -1) {
+                score |= (1 << 1); // Contains
+
+                boolean anyWordStart = false;
+                boolean anyWholeWord = false;
+                while (idx != -1 && !anyWholeWord) {
+                    boolean startsWord = idx == 0 || !Character.isLetterOrDigit(readableName.charAt(idx - 1));
+                    if (startsWord) {
+                        anyWordStart = true;
+                        int endIdx = idx + qLen;
+                        boolean endsWord = endIdx == readableName.length() || !Character.isLetterOrDigit(readableName.charAt(endIdx));
+                        if (endsWord) anyWholeWord = true;
+                    }
+                    idx = readableName.indexOf(trimmedQuery, idx + 1);
+                }
+
+                if (anyWordStart) score |= (1 << 2);  // Starts a word
+                if (anyWholeWord) score |= (1 << 3);  // Whole word match
+            }
 
             return score;
         } catch (Exception e) {
@@ -75,7 +93,7 @@ public class ShaderPackSearchEngine {
         return true;
     }
 
-    private static boolean isPopular(String readableName) {
+    private static boolean computeIsPopular(String readableName) {
         if (readableName == null) return false;
         String normalized = readableName.replaceAll("[^a-z0-9]", "");
         for (String keyword : POPULAR_PACK_KEYWORDS) {
@@ -91,9 +109,16 @@ public class ShaderPackSearchEngine {
         return COMPLEMENTARY_UNBOUND_PATTERN.matcher(normalized).replaceAll("complementary");
     }
 
-    public record ScoredPackElement(String packName, String readableName, int score, String query) implements Comparable<ScoredPackElement> {
-        public ScoredPackElement(String packName, int score, String query) {
-            this(packName, getReadableName(packName), score, query);
+    private static String stripTrailingVersionMarker(String prefix) {
+        return TRAILING_VERSION_MARKER_PATTERN.matcher(prefix).replaceAll("");
+    }
+
+    public record ScoredPackElement(String packName, String readableName, int score, boolean isPopular, String query) implements Comparable<ScoredPackElement> {
+        // Named constructor (not an auxiliary constructor) so readableName is computed once and
+        // reused for isPopular, rather than recomputed -- Java forbids statements before this(...).
+        public static ScoredPackElement of(String packName, int score, String query) {
+            String readableName = getReadableName(packName);
+            return new ScoredPackElement(packName, readableName, score, computeIsPopular(readableName), query);
         }
 
         @Override
@@ -124,17 +149,15 @@ public class ShaderPackSearchEngine {
 
         // 3. Well-known packs (see POPULAR_PACK_KEYWORDS) outrank lesser-known ones at the same match tier.
         private static int compareByPopularity(ScoredPackElement a, ScoredPackElement b) {
-            boolean aPopular = isPopular(a.readableName);
-            boolean bPopular = isPopular(b.readableName);
-            if (aPopular == bPopular) return 0;
-            return aPopular ? -1 : 1;
+            if (a.isPopular == b.isPopular) return 0;
+            return a.isPopular ? -1 : 1;
         }
 
         // 4. Version number comparison: higher version numbers outrank lower ones, but only if the prefix text is identical.
         private static int compareByVersion(ScoredPackElement a, ScoredPackElement b) {
             VersionMatch av = extractVersions(normalizeVersionFamily(a.readableName));
             VersionMatch bv = extractVersions(normalizeVersionFamily(b.readableName));
-            if (av == null || bv == null || !av.prefix.equals(bv.prefix)) return 0;
+            if (av == null || bv == null || !prefixesMatch(av.prefix, bv.prefix)) return 0;
 
             int len = Math.min(av.versions.size(), bv.versions.size());
             for (int i = 0; i < len; i++) {
@@ -142,6 +165,13 @@ public class ShaderPackSearchEngine {
                 if (cmp != 0) return cmp;
             }
             return 0;
+        }
+
+        // Returns true if the two prefixes are identical, or if one has a trailing version marker and the other doesn't.
+        private static boolean prefixesMatch(String prefixA, String prefixB) {
+            if (prefixA.equals(prefixB)) return true;
+            return stripTrailingVersionMarker(prefixA).equals(prefixB)
+                    || prefixA.equals(stripTrailingVersionMarker(prefixB));
         }
 
         // 5. Shorter matched word = higher query coverage = more relevant.
@@ -175,7 +205,7 @@ public class ShaderPackSearchEngine {
     private static VersionMatch extractVersions(String readableName) {
         if (readableName == null) return null;
         Matcher m = VERSION_PATTERN.matcher(readableName);
-        if (!m.find()) return null;
+        if (!m.find()) return new VersionMatch(readableName, List.of(new int[]{0}));
 
         String prefix = readableName.substring(0, m.start());
         List<int[]> versions = new ArrayList<>();
