@@ -21,7 +21,7 @@ public class ShaderPackSearchEngine {
     private static final Set<String> POPULAR_PACK_KEYWORDS = Set.of(
             "complementaryreimagined", "complementaryunbound", "bliss", "bsl", "solas", "kappa", "spooklementary",
             "chocapic", "photon", "rethinkingvoxels", "euphoriapatches", "superdupervanilla", "astralex", "sildurs",
-            "nostalgia"
+            "nostalgia", "seus", "makeup", "insanity", "lux", "mellow"
     );
 
     private static final Pattern COMPLEMENTARY_REIMAGINED_PATTERN = Pattern.compile("complementaryreimagined");
