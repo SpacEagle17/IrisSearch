@@ -158,7 +158,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     private void irisSearch$addNoResultsLabel() {
         try {
             Class<?> componentClass = MinecraftBridge.resolveClass("net.minecraft.network.chat.Component", "net.minecraft.class_2561");
-            Object label = MinecraftBridge.createTranslatableComponent("iris_search.search.no_results");
+            Object label = MinecraftBridge.createTranslatableComponent("iris_search.pack_search.no_results");
             if (componentClass == null || label == null) {
                 return;
             }

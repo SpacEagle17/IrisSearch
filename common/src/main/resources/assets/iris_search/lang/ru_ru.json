@@ -3,5 +3,5 @@
   "iris_search.button.clear": "Очистить",
   "iris_search.tooltip.search": "Поиск настроек шейдеров (Ctrl + F)",
   "iris_search.tooltip.clear": "Выход из поиска шейдеров (Esc)",
-  "iris_search.search.hint": "Поиск опций..."
+  "iris_search.option_search.hint": "Поиск опций..."
 }

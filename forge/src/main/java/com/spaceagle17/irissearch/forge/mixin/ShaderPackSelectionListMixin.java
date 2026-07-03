@@ -135,7 +135,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     private void irisSearch$appendNoResultsLabel(CallbackInfo ci) {
         if (this.irisSearch$lastFilterHadNoMatches) {
             try {
-                this.addLabelEntries(Component.translatable("iris_search.search.no_results"));
+                this.addLabelEntries(Component.translatable("iris_search.pack_search.no_results"));
             } catch (Throwable t) {
                 debugLog("Failed to add no-results label: " + t);
             }

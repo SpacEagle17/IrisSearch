@@ -185,10 +185,10 @@ public abstract class YarnShaderPackScreenMixin {
         }
 
         try {
-            EditBox box = new EditBox(irisSearch$accessor().irisSearch$getFont(), 0, 0, 10, 16, Component.translatable("iris_search.search.hint"));
+            EditBox box = new EditBox(irisSearch$accessor().irisSearch$getFont(), 0, 0, 10, 16, Component.translatable("iris_search.option_search.hint"));
             box.setMaxLength(64);
             box.setBordered(true);
-            box.setHint(Component.translatable("iris_search.search.hint")
+            box.setHint(Component.translatable("iris_search.option_search.hint")
                     .withStyle(Style.EMPTY.applyFormats(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
 
             irisSearch$positionSearchBox(box);
@@ -233,10 +233,10 @@ public abstract class YarnShaderPackScreenMixin {
         }
 
         try {
-            EditBox box = new EditBox(irisSearch$accessor().irisSearch$getFont(), 0, 0, 10, 14, Component.translatable("iris_search.search.pack_hint"));
+            EditBox box = new EditBox(irisSearch$accessor().irisSearch$getFont(), 0, 0, 10, 14, Component.translatable("iris_search.pack_search.hint"));
             box.setMaxLength(64);
             box.setBordered(true);
-            box.setHint(Component.translatable("iris_search.search.pack_hint")
+            box.setHint(Component.translatable("iris_search.pack_search.hint")
                     .withStyle(Style.EMPTY.applyFormats(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
 
             irisSearch$positionPackSearchBox(box);

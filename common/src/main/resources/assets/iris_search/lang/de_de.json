@@ -3,7 +3,7 @@
   "iris_search.button.clear": "Schließen",
   "iris_search.tooltip.search": "Shader-Einstellungen durchsuchen (Strg + F)",
   "iris_search.tooltip.clear": "Shader-Suche beenden (Esc)",
-  "iris_search.search.hint": "Einstellungen durchsuchen...",
-  "iris_search.search.pack_hint": "Shaders durchsuchen...",
-  "iris_search.search.no_results": "Kein Shader entspricht Ihrer Suche"
+  "iris_search.option_search.hint": "Einstellungen durchsuchen...",
+  "iris_search.pack_search.hint": "Shaders durchsuchen...",
+  "iris_search.pack_search.no_results": "Kein Shader entspricht Ihrer Suche"
 }

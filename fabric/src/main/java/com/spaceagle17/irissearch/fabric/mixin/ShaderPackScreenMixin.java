@@ -194,7 +194,7 @@ public class ShaderPackScreenMixin {
                 return null;
             }
 
-            Object hintComponent = MinecraftBridge.createTranslatableComponent("iris_search.search.hint");
+            Object hintComponent = MinecraftBridge.createTranslatableComponent("iris_search.option_search.hint");
             if (hintComponent == null) {
                 debugLog("Could not create narration/hint text components");
                 return null;
@@ -272,7 +272,7 @@ public class ShaderPackScreenMixin {
                 return null;
             }
 
-            Object hintComponent = MinecraftBridge.createTranslatableComponent("iris_search.search.pack_hint");
+            Object hintComponent = MinecraftBridge.createTranslatableComponent("iris_search.pack_search.hint");
             if (hintComponent == null) {
                 debugLog("Could not create pack search hint text component");
                 return null;
