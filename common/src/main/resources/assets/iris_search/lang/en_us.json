@@ -3,5 +3,9 @@
   "iris_search.button.clear": "Clear",
   "iris_search.tooltip.search": "Search Shader Settings (Ctrl + F)",
   "iris_search.tooltip.clear": "Exit Shader Search (Esc)",
-  "iris_search.search.hint": "Search options..."
+  "iris_search.option_search.hint": "Search Options...",
+  "iris_search.pack_search.hint": "Search Shader Packs...",
+  "iris_search.pack_search.no_results": "No Shader Pack matches your search",
+  "fml.menu.mods.info.description.iris_search": "A mod which adds a search bar to the Iris mod.",
+  "modmenu.descriptionTranslation.iris_search": "A mod which adds a search bar to the Iris mod."
 }

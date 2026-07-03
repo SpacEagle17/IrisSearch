@@ -3,5 +3,5 @@
   "iris_search.button.clear": "Temizle",
   "iris_search.tooltip.search": "Shader Ayarlarında Ara (Ctrl + F)",
   "iris_search.tooltip.clear": "Shader Aramasından Çık (Esc)",
-  "iris_search.search.hint": "Ayarları ara..."
+  "iris_search.option_search.hint": "Ayarları ara..."
 }

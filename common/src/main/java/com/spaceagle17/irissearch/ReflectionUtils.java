@@ -44,6 +44,43 @@ public class ReflectionUtils {
     }
 
     /**
+     * Sets the value of a field in an object by its name.
+     * @param target The object containing the field.
+     * @param fieldName The name of the field.
+     * @param value The value to set.
+     * @return True if the field was found and set, false otherwise.
+     */
+    public static boolean setFieldValue(Object target, String fieldName, Object value) {
+        Class<?> clazz;
+        Object instance = target;
+        try {
+            if (target instanceof String) {
+                clazz = Class.forName((String) target);
+                instance = null;
+            } else if (target instanceof Class<?>) {
+                clazz = (Class<?>) target;
+                instance = null;
+            } else {
+                clazz = target.getClass();
+            }
+
+            while (clazz != null) {
+                try {
+                    Field field = clazz.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    field.set(instance, value);
+                    return true;
+                } catch (NoSuchFieldException e) {
+                    clazz = clazz.getSuperclass();
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
+    }
+
+    /**
      * Finds and retrieves the value of a field inside an object by its class type name.
      */
     public static Object getFieldByType(Object target, String typeClassName) {
