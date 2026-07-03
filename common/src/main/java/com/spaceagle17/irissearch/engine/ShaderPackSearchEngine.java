@@ -17,8 +17,7 @@ public class ShaderPackSearchEngine {
     private static final Pattern ZIP_EXTENSION_PATTERN = Pattern.compile("\\.zip$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+(?:\\.\\d+){0,3}");
 
-    // Well-known shader packs, normalized (letters/digits only) so "BSL", "Rethinking Voxels" and
-    // "rethinking-voxels" all match regardless of the punctuation/spacing a pack name happens to use.
+    // Well-known shader packs, normalized.
     private static final Set<String> POPULAR_PACK_KEYWORDS = Set.of(
             "complementaryreimagined", "complementaryunbound", "bliss", "bsl", "solas", "kappa", "spooklementary",
             "chocapic", "photon", "rethinkingvoxels", "euphoriapatches", "superdupervanilla", "astralex", "sildurs",
