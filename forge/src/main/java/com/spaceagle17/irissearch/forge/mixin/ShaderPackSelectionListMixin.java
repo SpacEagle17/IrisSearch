@@ -2,6 +2,7 @@ package com.spaceagle17.irissearch.forge.mixin;
 
 import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
+import com.spaceagle17.irissearch.config.ConfigHandler;
 import com.spaceagle17.irissearch.engine.ShaderPackSearchEngine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.forge.ISearchablePackList;
@@ -72,7 +73,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     @Override public int irisSearch$getListTop() { return irisSearch$getIntField(this, "y0", "f_93390_"); }
     @Override public int irisSearch$getListWidth() { return irisSearch$getIntField(this, "x1", "f_93392_") - irisSearch$getIntField(this, "x0", "f_93393_"); }
     @Override public int irisSearch$getRowWidth() { return Math.min(308, irisSearch$getIntField(this, "width", "f_93388_") - 50); }
-    @Override public boolean irisSearch$shouldShowSearchBar() { return this.irisSearch$packCount >= IrisSearch.MIN_PACKS_FOR_PACK_SEARCH_BAR; }
+    @Override public boolean irisSearch$shouldShowSearchBar() { return this.irisSearch$packCount >= ConfigHandler.minPacksForSelectionSearch; }
 
     @Override
     public void irisSearch$setListTop(int top) {

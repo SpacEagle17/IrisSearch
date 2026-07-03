@@ -1,5 +1,7 @@
 package com.spaceagle17.irissearch;
 
+import com.spaceagle17.irissearch.config.Config;
+import com.spaceagle17.irissearch.config.ConfigHandler;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 
 import java.nio.file.Path;
@@ -20,13 +22,11 @@ public class IrisSearch {
     public static String pendingSearchQuery = "";
     public static int pendingSearchCursor = 0;
 
-    // Minimum number of shaders needed for the search bar to show in the shader selection menu
-    public static final int MIN_PACKS_FOR_PACK_SEARCH_BAR = 6;
-
     public IrisSearch() {
         instance = this;
 
         loggerInstance = new IrisSearchLogger();
+        ConfigHandler.configStuff();
         log(0, "IrisSearch v" + VERSION + " initialized successfully.");
     }
 
@@ -44,5 +44,14 @@ public class IrisSearch {
 
     private static void debugLog(String message) {
         IrisSearchLogger.debugLog("[IrisSearch] " + message);
+    }
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                Config.stopConfigWatcher();
+            } catch (Throwable ignored) {
+            }
+        }));
     }
 }

@@ -2,6 +2,7 @@ package com.spaceagle17.irissearch.neoforge.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.spaceagle17.irissearch.IrisSearch;
+import com.spaceagle17.irissearch.config.ConfigHandler;
 import com.spaceagle17.irissearch.engine.ShaderPackSearchEngine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.neoforge.ISearchablePackList;
@@ -93,7 +94,7 @@ public abstract class ShaderPackSelectionListMixin implements ISearchablePackLis
     @Override public int irisSearch$getListWidth() { return this.irisSearch$listWidth; }
     @Override public int irisSearch$getListBottom() { return this.irisSearch$listBottom; }
     @Override public int irisSearch$getRowWidth() { return this.irisSearch$rowWidth; }
-    @Override public boolean irisSearch$shouldShowSearchBar() { return this.irisSearch$packCount >= IrisSearch.MIN_PACKS_FOR_PACK_SEARCH_BAR; }
+    @Override public boolean irisSearch$shouldShowSearchBar() { return this.irisSearch$packCount >= ConfigHandler.minPacksForSelectionSearch; }
 
     @Override
     public void irisSearch$updateSearchQuery(String query) {
