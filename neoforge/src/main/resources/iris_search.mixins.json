@@ -10,6 +10,7 @@
     "ScreenAccessor",
     "ShaderPackOptionListHeaderEntryMixin",
     "ShaderPackOptionListMixin",
-    "ShaderPackScreenMixin"
+    "ShaderPackScreenMixin",
+    "ShaderPackSelectionListMixin"
   ]
 }

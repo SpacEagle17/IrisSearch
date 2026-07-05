@@ -12,7 +12,8 @@
     "ScreenAccessor",
     "ShaderPackOptionListHeaderEntryMixin",
     "ShaderPackOptionListMixin",
-    "ShaderPackScreenMixin"
+    "ShaderPackScreenMixin",
+    "ShaderPackSelectionListMixin"
   ],
   "minVersion": "0.8"
 }

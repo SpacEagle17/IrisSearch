@@ -154,7 +154,7 @@ publishMods {
 
     changelog = rootProject.ext.changelogFile.text
 
-	displayName = "IrisSearch ${project.version}"
+	displayName = "Iris Search ${project.version}"
 
     type = STABLE
     modLoaders.add("fabric")

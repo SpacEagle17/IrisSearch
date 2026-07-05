@@ -1,0 +1,11 @@
+{
+  "iris_search.button.search": "Rechercher",
+  "iris_search.button.clear": "Effacer",
+  "iris_search.tooltip.search": "Rechercher dans les paramètres de shaders (Ctrl + F)",
+  "iris_search.tooltip.clear": "Quitter la recherche de shaders (Échap)",
+  "iris_search.option_search.hint": "Rechercher des options..."
+  "iris_search.pack_search.hint": "Rechercher des packs de shaders...",
+  "iris_search.pack_search.no_results": "Aucun pack de shaders ne correspond à votre recherche",
+  "fml.menu.mods.info.description.iris_search": "Un mod qui ajoute une barre de recherche au mod Iris.",
+  "modmenu.descriptionTranslation.iris_search": "Un mod qui ajoute une barre de recherche au mod Iris."
+}

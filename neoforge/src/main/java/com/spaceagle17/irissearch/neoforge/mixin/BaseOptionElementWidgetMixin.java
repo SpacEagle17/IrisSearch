@@ -1,7 +1,7 @@
 package com.spaceagle17.irissearch.neoforge.mixin;
 
 import com.spaceagle17.irissearch.ReflectionUtils;
-import com.spaceagle17.irissearch.ShaderSearchEngine;
+import com.spaceagle17.irissearch.engine.ShaderOptionsSearchEngine;
 import com.spaceagle17.irissearch.neoforge.ISearchableOptionContainer;
 import com.spaceagle17.irissearch.neoforge.ISearchableOptionList;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
@@ -56,7 +56,7 @@ public class BaseOptionElementWidgetMixin {
             StringBuilder display = new StringBuilder();
             for (String segment : segments) {
                 if ("root".equals(segment)) continue;
-                String translated = ShaderSearchEngine.getDisplaySettingsName(segment).replaceAll("\\s+>", "");
+                String translated = ShaderOptionsSearchEngine.getDisplaySettingsName(segment).replaceAll("\\s+>", "");
                 String label = translated.isEmpty() ? segment : translated;
                 if (!display.isEmpty()) display.append(" > ");
                 display.append(label);

@@ -1,7 +1,7 @@
 package com.spaceagle17.irissearch.fabric.mixin;
 
 import com.spaceagle17.irissearch.IrisSearch;
-import com.spaceagle17.irissearch.ShaderSearchEngine;
+import com.spaceagle17.irissearch.engine.ShaderOptionsSearchEngine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.fabric.ISearchableOptionContainer;
 import net.irisshaders.iris.shaderpack.option.ProfileSet;
@@ -127,15 +127,15 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
                 elementById.putIfAbsent(id, el);
             }
 
-            List<String> allFlatOptionIds = ShaderSearchEngine.getAllOptionsFlattened(new ArrayList<>(elementById.keySet()));
-            List<ShaderSearchEngine.ScoredOptionElement> scoredResults = new ArrayList<>();
+            List<String> allFlatOptionIds = ShaderOptionsSearchEngine.getAllOptionsFlattened(new ArrayList<>(elementById.keySet()));
+            List<ShaderOptionsSearchEngine.ScoredOptionElement> scoredResults = new ArrayList<>();
 
             String path;
             for (String optionId : allFlatOptionIds) {
                 path = irisSearch$getOptionPath(optionId);
-                int score = ShaderSearchEngine.computeMatchTier(optionId, normalizedQuery);
+                int score = ShaderOptionsSearchEngine.computeMatchTier(optionId, normalizedQuery);
                 if (score > 0) {
-                    scoredResults.add(new ShaderSearchEngine.ScoredOptionElement(optionId, ShaderSearchEngine.getReadableName(optionId), path, score, normalizedQuery));
+                    scoredResults.add(new ShaderOptionsSearchEngine.ScoredOptionElement(optionId, ShaderOptionsSearchEngine.getReadableTranslatedName(optionId), ShaderOptionsSearchEngine.getReadableDefaultName(optionId), path, score, normalizedQuery));
                 }
             }
 
@@ -150,9 +150,9 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
     }
 
     @Unique
-    private void irisSearch$applyFilteredLayout(List<ShaderSearchEngine.ScoredOptionElement> sortedElements, Map<String, OptionMenuOptionElement> elementById) {
+    private void irisSearch$applyFilteredLayout(List<ShaderOptionsSearchEngine.ScoredOptionElement> sortedElements, Map<String, OptionMenuOptionElement> elementById) {
         this.mainScreen.elements.clear();
-        for (ShaderSearchEngine.ScoredOptionElement scored : sortedElements) {
+        for (ShaderOptionsSearchEngine.ScoredOptionElement scored : sortedElements) {
             OptionMenuOptionElement el = elementById.get(scored.optionId());
             if (el != null) this.mainScreen.elements.add(el);
         }

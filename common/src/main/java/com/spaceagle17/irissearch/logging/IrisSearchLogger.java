@@ -2,6 +2,7 @@ package com.spaceagle17.irissearch.logging;
 
 
 import com.spaceagle17.irissearch.IrisSearch;
+import com.spaceagle17.irissearch.config.ConfigHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.util.*;
@@ -12,7 +13,6 @@ public class IrisSearchLogger {
 
     private static final int SPAM_PROTECTION_QUEUE_SIZE = 100; // Maximum number of messages to track for spam protection
     private final LogMessageQueue logMessageQueue = new LogMessageQueue(SPAM_PROTECTION_QUEUE_SIZE);
-    private static boolean isDebugEnabled;
 
     static {
         try {
@@ -22,12 +22,6 @@ public class IrisSearchLogger {
             log4jAvailable = false;
             System.out.println("[IrisSearch] Log4j not available, using System.out fallback");
         }
-    }
-
-    public IrisSearchLogger() {
-
-        isDebugLoggingEnabled();
-
     }
 
     /**
@@ -74,7 +68,7 @@ public class IrisSearchLogger {
      * Public entry point for debug logging
      */
     public static void debugLog(String message) {
-        if (isDebugEnabled) {
+        if (ConfigHandler.doDebugLogging) {
             IrisSearch.log(0, message);
         }
     }
@@ -92,35 +86,6 @@ public class IrisSearchLogger {
         }
 
         return count > 3;
-    }
-
-    /**
-     * Helper method to determine if debug logging is enabled via JVM flags
-     */
-    private void isDebugLoggingEnabled() {
-        try {
-            String jvmDebugArg = System.getProperty("ebugIrisSearch");
-
-            if (jvmDebugArg == null) {
-                isDebugEnabled = false;
-                return;
-            }
-
-            String argLower = jvmDebugArg.trim().toLowerCase(Locale.ROOT);
-            if ("true".equals(argLower)) {
-                IrisSearch.log(0, "Debug logging enabled via JVM argument: " + jvmDebugArg);
-                isDebugEnabled = true;
-            } else if ("false".equals(argLower)) {
-                isDebugEnabled = false;
-            } else {
-                // Log a warning about the invalid argument format, using IrisSearch.log directly
-                // to safely avoid looping back into debug log evaluations.
-                IrisSearch.log(2, "Invalid value for -DebugIrisSearch: " + jvmDebugArg + ". Only 'true' or 'false' are accepted. Defaulting to false.");
-                isDebugEnabled = false;
-            }
-        } catch (Exception e) {
-            isDebugEnabled = false;
-        }
     }
 
     public static String getStackTrace(Exception e) {
