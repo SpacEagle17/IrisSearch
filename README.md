@@ -27,7 +27,7 @@ IrisSearch embeds a search bar right into the shader options GUI. Type what you 
 
 ## Features
 - **In-GUI Search Bar:** Adds a seamlessly integrated text input field directly inside the shader pack options menu.
-- **Translation Support:** Works with localized shader options; you can search using your selected language as long as the shader supports said language :p
+* **Translation Support:** Search in your selected language (if supported by the shader). The mod itself is also translatable. Contribute [here on GitHub](https://github.com/SpacEagle17/IrisSearch/tree/main/common/src/main/resources/assets/iris_search/lang).
 - **No Setup Needed:** Works completely out of the box with zero configuration files to edit.
 - **Loader Compatibility:** Available for Fabric, Forge, and NeoForge.
 - **Version Support:** Compatible from 1.20.1 up to the latest Minecraft versions.

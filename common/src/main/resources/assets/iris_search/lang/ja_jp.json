@@ -3,5 +3,5 @@
   "iris_search.button.clear": "クリア",
   "iris_search.tooltip.search": "シェーダーの設定を検索 (Ctrl + F)",
   "iris_search.tooltip.clear": "検索を終了 (Esc)",
-  "iris_search.search.hint": "設定を検索..."
+  "iris_search.option_search.hint": "設定を検索..."
 }
