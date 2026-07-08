@@ -15,24 +15,37 @@ public class ReflectionUtils {
     }
 
     public static Object getFieldValue(Object target, String fieldName) {
+        Object instance = (target instanceof String || target instanceof Class<?>) ? null : target;
+        Field field = getField(target, fieldName);
+        if (field == null) return null;
+        try {
+            return field.get(instance);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /*
+     * Retrieves a Field object for the specified field name from the target object or class.
+     */
+    public static Field getField(Object target, String fieldName) {
         Class<?> clazz;
-        Object instance = target;
         try {
             if (target instanceof String) {
                 clazz = Class.forName((String) target);
-                instance = null;
             } else if (target instanceof Class<?>) {
                 clazz = (Class<?>) target;
-                instance = null;
-            } else {
+            } else if (target != null) {
                 clazz = target.getClass();
+            } else {
+                return null;
             }
 
             while (clazz != null) {
                 try {
                     Field field = clazz.getDeclaredField(fieldName);
                     field.setAccessible(true);
-                    return field.get(instance);
+                    return field;
                 } catch (NoSuchFieldException e) {
                     clazz = clazz.getSuperclass();
                 }
