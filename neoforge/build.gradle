@@ -32,6 +32,9 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 // Fix the duplicate JavaCompile task configuration
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs.addAll([
+        "-XDstringConcat=inline"
+    ])
 }
 
 // Add a special task to compile just Main.java with Java 8 compatibility

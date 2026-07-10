@@ -26,6 +26,7 @@ tasks.withType(JavaCompile).configureEach {
 
 	it.options.compilerArgs.addAll([
 		"-Xlint:-options",
-		"-Xlint:-processing"
+		"-Xlint:-processing",
+		"-XDstringConcat=inline"
 	])
 }

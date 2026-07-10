@@ -293,8 +293,9 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 
     options.compilerArgs.addAll([
-            "-AdisableTargetValidator=true",
-            "-Xlint:-processing"
+        "-AdisableTargetValidator=true",
+        "-Xlint:-processing",
+        "-XDstringConcat=inline"
     ])
 }
 
