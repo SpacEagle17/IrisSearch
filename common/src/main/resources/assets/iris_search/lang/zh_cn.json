@@ -3,9 +3,9 @@
   "iris_search.button.clear": "清除搜索栏",
   "iris_search.tooltip.search": "搜索光影包设定 (Ctrl + F)",
   "iris_search.tooltip.clear": "退出搜索 (Esc)",
-  "iris_search.option_search.hint": "搜索设定...",
-  "iris_search.pack_search.hint": "搜索光影包...",
+  "iris_search.option_search.hint": "搜索设定……",
+  "iris_search.pack_search.hint": "搜索光影包……",
   "iris_search.pack_search.no_results": "没有光影包符合你的搜索",
-  "fml.menu.mods.info.description.iris_search": "一个为Iris模组添加搜索栏的模组",
-  "modmenu.descriptionTranslation.iris_search": "一个为Iris模组添加搜索栏的模组"
+  "fml.menu.mods.info.description.iris_search": "一个为Iris模组添加搜索栏的模组。",
+  "modmenu.descriptionTranslation.iris_search": "一个为Iris模组添加搜索栏的模组。"
 }
