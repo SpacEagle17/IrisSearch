@@ -3,8 +3,8 @@
   "iris_search.button.clear": "Ukončit",
   "iris_search.tooltip.search": "Vyhledávat nastavení shaderu (Ctrl + F)",
   "iris_search.tooltip.clear": "Ukončit vyhledávání shaderu (Esc)",
-  "iris_search.option_search.hint": "Vyhledávat nastavení…",
-  "iris_search.pack_search.hint": "Vyhledávat balíčky shaderů…",
+  "iris_search.option_search.hint": "Vyhledávat nastavení...",
+  "iris_search.pack_search.hint": "Vyhledávat balíčky shaderů...",
   "iris_search.pack_search.no_results": "Nebyl nalezen žádný balíček shaderů",
   "fml.menu.mods.info.description.iris_search": "Mod, který přidává vyhledávací lištu k modu Iris.",
   "modmenu.descriptionTranslation.iris_search": "Mod, který přidává vyhledávací lištu k modu Iris."
