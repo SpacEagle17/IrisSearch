@@ -8,4 +8,4 @@ files:
   - source: "/common/src/main/resources/assets/iris_search/lang/en_us.json"
     translation: "/common/src/main/resources/assets/iris_search/lang/%locale_with_underscore%.json"
     type: "json"
-    update_option: "update_as_unapproved"
+    # update_option: "update_as_unapproved"
