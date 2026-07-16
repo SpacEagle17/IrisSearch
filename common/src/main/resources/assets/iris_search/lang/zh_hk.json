@@ -3,7 +3,7 @@
   "iris_search.button.clear": "清除搜索欄",
   "iris_search.tooltip.search": "搜索光影包設定 (Ctrl + F)",
   "iris_search.tooltip.clear": "退出搜索 (Esc)",
-  "iris_search.option_search.hint": "搜索設定...",
+  "iris_search.option_search.hint": "搜索設定……",
   "iris_search.pack_search.hint": "搜索光影包……",
   "iris_search.pack_search.no_results": "沒有光影包符合你的搜索",
   "fml.menu.mods.info.description.iris_search": "一個為Iris模組添加搜索欄的模組。",
