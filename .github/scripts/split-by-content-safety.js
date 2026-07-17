@@ -41,9 +41,11 @@ async function main() {
       const langId = fileName.replace(/\.json$/, "");
       const oldPath = path.join(LANG_DIR, fileName);
       const newPath = path.join(NEW_DIR, fileName);
-      if (!fs.existsSync(oldPath)) continue;
 
-      const oldRaw = fs.readFileSync(oldPath, "utf8");
+      // If the old file doesn't exist, we treat it as an empty file. For new languages which did not exist before.
+      const oldRaw = fs.existsSync(oldPath)
+        ? fs.readFileSync(oldPath, "utf8")
+        : "";
       const newRaw = fs.readFileSync(newPath, "utf8");
       const oldObj = JSON.parse(oldRaw);
       const newObj = JSON.parse(newRaw);
