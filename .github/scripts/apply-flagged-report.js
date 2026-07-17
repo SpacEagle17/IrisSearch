@@ -1,4 +1,4 @@
-// Applies the flagged updates recorded by split-by-profanity.js onto the
+// Applies the flagged updates recorded by split-by-content-safety.js onto the
 // current files (which by this point already have the clean changes
 // committed). Run this only on the localization branch, after the clean
 // commit has landed on the target branch.
@@ -6,16 +6,9 @@
 
 const fs = require("fs");
 const path = require("path");
+const { REPO_ROOT, LANG_DIR, patchJsonFile } = require("./lib/content-safety");
 
-const ROOT = path.resolve(__dirname, "..", "..");
-const LANG_DIR = path.join(ROOT, "common/src/main/resources/assets/iris_search/lang");
-const REPORT_PATH = path.join(ROOT, "_flagged-report.json");
-
-function patchJsonFile(oldRaw, updates) {
-  const obj = JSON.parse(oldRaw);
-  for (const [key, value] of updates) obj[key] = value;
-  return JSON.stringify(obj, null, 2) + "\n";
-}
+const REPORT_PATH = path.join(REPO_ROOT, "_flagged-report.json");
 
 function main() {
   if (!fs.existsSync(REPORT_PATH)) {
