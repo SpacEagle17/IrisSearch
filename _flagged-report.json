@@ -1,0 +1,16 @@
+[
+  {
+    "file": "es_es.json",
+    "key": "iris_search.button.search",
+    "language": "es_es",
+    "oldValue": "Buscar",
+    "existedBefore": true,
+    "newValue": "joder",
+    "matchedWords": [
+      "joder"
+    ],
+    "reasons": [
+      "profanity-match"
+    ]
+  }
+]
