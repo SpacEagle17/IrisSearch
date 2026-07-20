@@ -72,12 +72,26 @@ function resolveCrowdinLanguageId(langId, projectLanguageIds) {
 async function resolveStringId(token, projectId, key, cache) {
   const cacheKey = `${projectId}:${key}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
-  const result = await crowdinRequest(
+
+  const filtered = await crowdinRequest(
     token,
     "GET",
-    `/projects/${projectId}/strings?filter=${encodeURIComponent(key)}&scope=identifier&limit=50`,
+    `/projects/${projectId}/strings?filter=${encodeURIComponent(key)}&scope=identifier&limit=500`,
   );
-  const match = (result.data || []).find((item) => item.data.identifier === key);
+  let match = (filtered.data || []).find(
+    (item) => item.data.identifier === key,
+  );
+
+  // If the filtered search didn't find it, try fetching all strings and searching manually.
+  if (!match) {
+    const all = await crowdinRequest(
+      token,
+      "GET",
+      `/projects/${projectId}/strings?limit=500`,
+    );
+    match = (all.data || []).find((item) => item.data.identifier === key);
+  }
+
   const id = match ? match.data.id : null;
   cache.set(cacheKey, id);
   return id;
