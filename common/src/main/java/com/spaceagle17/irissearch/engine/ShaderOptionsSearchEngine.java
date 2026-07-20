@@ -13,17 +13,27 @@ public class ShaderOptionsSearchEngine {
     private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
-    /** Computes the match tier for a given option ID and query.
-     * @param optionId The ID of the option to search for.
-     * @param query The search query.
-     * @return The match tier (higher is better).
+    private static final int MIN_TYPO_WORD_LENGTH = 4;
+
+    /**
+     * Result of {@link #computeMatchTier}, containing an exact/synonym match {@code score}
+     * and a {@code typo} fallback flag. Valid if {@code score > 0} or {@code typo} is true.
      */
-    public static int computeMatchTier(String optionId, String query) {
+    public record MatchTierResult(int score, boolean typo) {}
+
+    /**
+     * Computes the match tier for an option ID against a query.
+     *
+     * @param optionId Option ID to search.
+     * @param query Search string.
+     * @return Match result with score and typo status.
+     */
+    public static MatchTierResult computeMatchTier(String optionId, String query) {
         try {
-            if (optionId == null || query == null) return 0;
+            if (optionId == null || query == null) return new MatchTierResult(0, false);
 
             String trimmedQuery = query.toLowerCase(Locale.ROOT).trim();
-            if (trimmedQuery.isEmpty()) return 0;
+            if (trimmedQuery.isEmpty()) return new MatchTierResult(0, false);
 
             String readableTranslatedName = getReadableTranslatedName(optionId);
             String readableDefaultName = getReadableDefaultName(optionId);
@@ -37,50 +47,40 @@ public class ShaderOptionsSearchEngine {
                     int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
                     if (synonymScore > best) best = synonymScore;
                 }
-                return best;
+                if (best > 0) return new MatchTierResult(best, false);
+
+                // Typo tolerance: last resort once literal and synonym matching both came up empty.
+                boolean typo = typoMatchesAnyWord(trimmedQuery, readableTranslatedName) || typoMatchesAnyWord(trimmedQuery, readableDefaultName);
+                return new MatchTierResult(0, typo);
             }
 
-            // Multi-word query: every token must appear somewhere (AND), scored via bitwise-AND of each
-            // token's tier so a bit only survives if *all* tokens satisfy that criterion. OR'd with the
-            // literal-phrase tier so a contiguous match (e.g. "bloom strength") still outranks scattered tokens.
+            // Multi-word query: ALL tokens must match (AND-combined via bitwise AND).
+            // OR'd with literal-phrase tier so full contiguous matches outrank scattered tokens.
+            // Typo-only tokens contribute no bits to score, but satisfy the token match requirement.
             int andScore = -1;
+            boolean anyTokenTypo = false;
             for (String token : tokens) {
                 int tokenScore = computeTokenTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
                 for (String synonym : SearchDictionaries.getSynonyms(token)) {
                     int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
                     if (synonymScore > tokenScore) tokenScore = synonymScore;
                 }
-                if (tokenScore == 0) return 0;
+                if (tokenScore == 0) {
+                    if (typoMatchesAnyWord(token, readableTranslatedName) || typoMatchesAnyWord(token, readableDefaultName)) {
+                        anyTokenTypo = true;
+                        continue;
+                    }
+                    return new MatchTierResult(0, false);
+                }
                 andScore &= tokenScore;
             }
+            int realAndScore = andScore == -1 ? 0 : andScore; // -1 means no token ever folded in (all were typo-only)
             int phraseScore = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
-            return phraseScore | andScore;
+            return new MatchTierResult(phraseScore | realAndScore, anyTokenTypo);
         } catch (Exception e) {
             debugLog("computeMatchTier threw for query \"" + query + "\", treating as no match");
-            return 0;
+            return new MatchTierResult(0, false);
         }
-    }
-
-    /** Computes the match tier of a single query string (one standalone token, or a full phrase) against an option's fields. */
-    private static int computeQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
-                                               String readableDefaultName, String rawId, String commentText) {
-        // 1 char Ascii query: only match if a readable name starts directly with the query
-        // Only readableTranslatedName as that feels better
-        if (singleQuery.length() == 1 && isOnlyAscii(singleQuery)) {
-            return (!readableTranslatedName.isEmpty() && readableTranslatedName.startsWith(singleQuery)) ? 1 : 0;
-        }
-
-        return scanQueryStringTier(optionId, singleQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
-    }
-
-    /**
-     * Computes the match tier for a single token in a multi-word AND query.
-     * Unlike {@link #computeQueryStringTier}, this bypasses the 1-character prefix restriction
-     * so partial multi-word queries (e.g., "bloom s") match on word boundaries normally.
-     */
-    private static int computeTokenTier(String optionId, String token, String readableTranslatedName,
-                                         String readableDefaultName, String rawId, String commentText) {
-        return scanQueryStringTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
     }
 
     private static int scanQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
@@ -111,6 +111,75 @@ public class ShaderOptionsSearchEngine {
         return score;
     }
 
+    /** Computes the match tier of a single query string (one standalone token, or a full phrase) against an option's fields. */
+    private static int computeQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
+                                               String readableDefaultName, String rawId, String commentText) {
+        // 1 char Ascii query: only match if a readable name starts directly with the query
+        // Only readableTranslatedName as that feels better
+        if (singleQuery.length() == 1 && isOnlyAscii(singleQuery)) {
+            return (!readableTranslatedName.isEmpty() && readableTranslatedName.startsWith(singleQuery)) ? 1 : 0;
+        }
+
+        return scanQueryStringTier(optionId, singleQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+    }
+
+    /**
+     * Computes the match tier for a single token in a multi-word AND query.
+     * Unlike {@link #computeQueryStringTier}, this bypasses the 1-character prefix restriction
+     * so partial multi-word queries (e.g., "bloom s") match on word boundaries normally.
+     */
+    private static int computeTokenTier(String optionId, String token, String readableTranslatedName,
+                                         String readableDefaultName, String rawId, String commentText) {
+        return scanQueryStringTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
+    }
+
+    /** Whether any whitespace-separated word in {@code readableName} is a close-enough typo of {@code query}. */
+    private static boolean typoMatchesAnyWord(String query, String readableName) {
+        if (readableName == null || readableName.isEmpty()) return false;
+        for (String word : readableName.split("\\s+")) {
+            if (isTypoMatch(query, word)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Checks if {@code query} matches {@code word} within an allowed Levenshtein distance
+     * (1 for words <= 6 chars, 2 for longer). Enforces {@link #MIN_TYPO_WORD_LENGTH}.
+     */
+    private static boolean isTypoMatch(String query, String word) {
+        int queryLength = query.length();
+        int wordLength = word.length();
+        if (queryLength < MIN_TYPO_WORD_LENGTH || wordLength < MIN_TYPO_WORD_LENGTH) return false;
+
+        int maxDistance = queryLength <= 6 ? 1 : 2;
+        if (Math.abs(queryLength - wordLength) > maxDistance) return false; // cheap reject before the DP below
+
+        return levenshteinDistance(query, word) <= maxDistance;
+    }
+
+    /** Classic Levenshtein edit distance (insertions/deletions/substitutions) between two strings. */
+    private static int levenshteinDistance(String a, String b) {
+        int[] previousRow = new int[b.length() + 1];
+        int[] currentRow = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) previousRow[j] = j;
+
+        for (int i = 1; i <= a.length(); i++) {
+            currentRow[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int substitutionCost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                currentRow[j] = Math.min(
+                        Math.min(currentRow[j - 1] + 1, previousRow[j] + 1),
+                        previousRow[j - 1] + substitutionCost
+                );
+            }
+            int[] swap = previousRow;
+            previousRow = currentRow;
+            currentRow = swap;
+        }
+
+        return previousRow[b.length()];
+    }
+
     /**
      * @return A flattened list of unique option IDs, preserving the order of first occurrence.
      */
@@ -130,11 +199,12 @@ public class ShaderOptionsSearchEngine {
     // Used to separate "how well does the readable name match" from comment/rawId/value noise.
     private static final int READABLE_NAME_BITS = (1 << 14) | (1 << 13) | (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 4) | (1 << 3);
 
-    public record ScoredOptionElement(String optionId, String readableTranslatedName, String readableDefaultName, String path, int score, String query) implements Comparable<ScoredOptionElement> {
+    public record ScoredOptionElement(String optionId, String readableTranslatedName, String readableDefaultName, String path, int score, boolean typo, String query) implements Comparable<ScoredOptionElement> {
         @Override
         public int compareTo(@NotNull ScoredOptionElement other) {
             String q = this.query != null ? this.query.toLowerCase(Locale.ROOT).trim() : "";
             int result;
+            if ((result = compareByTypoPenalty(this, other))          != 0) return result;
             if ((result = compareByReadableNameQuality(this, other))  != 0) return result;
             if ((result = compareByMatchedWordLength(this, other, q)) != 0) return result;
             if ((result = compareByWordCount(this, other))            != 0) return result;
@@ -142,6 +212,12 @@ public class ShaderOptionsSearchEngine {
             if ((result = compareByPrefixBoost(this, other, q))      != 0) return result;
             if ((result = compareByPathDepth(this, other))           != 0) return result;
             return compareByAlphabetical(this, other);
+        }
+
+        // 0. Typo-tolerant matches always rank below any real match.
+        private static int compareByTypoPenalty(ScoredOptionElement a, ScoredOptionElement b) {
+            if (a.typo == b.typo) return 0;
+            return a.typo ? 1 : -1;
         }
 
         // 1. Readable-name match quality (translated + default name bits only).
