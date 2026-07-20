@@ -128,7 +128,12 @@ async function syncRejectionToCrowdin(item, ctx) {
       item.language,
       ctx.projectLanguageIds,
     );
-    if (!languageId) return "failed";
+    if (!languageId) {
+      console.warn(
+        `WARNING: Crowdin sync failed for ${item.file} [${item.key}]: no Crowdin target language matches "${item.language}" (project languages: ${ctx.projectLanguageIds.join(", ")})`,
+      );
+      return "failed";
+    }
 
     const stringId = await resolveStringId(
       ctx.token,
@@ -136,7 +141,12 @@ async function syncRejectionToCrowdin(item, ctx) {
       item.key,
       ctx.stringIdCache,
     );
-    if (!stringId) return "failed";
+    if (!stringId) {
+      console.warn(
+        `WARNING: Crowdin sync failed for ${item.file} [${item.key}]: no Crowdin string found with identifier "${item.key}"`,
+      );
+      return "failed";
+    }
 
     const translations = await listTranslations(
       ctx.token,
