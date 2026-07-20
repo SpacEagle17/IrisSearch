@@ -134,6 +134,9 @@ jobs:
 
       - name: "Commit and push clean changes to target branch"
         run: |
+          # Remove any stray _flagged-report.json from the target branch
+          # (it should only exist on the localization branch).
+          git rm --ignore-unmatch --quiet -- '_flagged-report.json'
           git add -- '${{ env.LANG_PATH }}/*.json'
           if git diff --cached --quiet; then
             echo "No clean changes to commit."

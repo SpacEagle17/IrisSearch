@@ -1,7 +1,8 @@
 // Shared detection/parsing logic for the content-safety pipeline. Used by
 // split-by-content-safety.js (the main diff-and-split check) and
-// resolve-safe-term.js (the /safe-term PR comment automation) so both stay
-// in sync instead of drifting apart as separately-maintained copies.
+// process-pr-commands.js (the /safe-term, /accept, /reject PR comment
+// automation) so both stay in sync instead of drifting apart as
+// separately-maintained copies.
 "use strict";
 
 const fs = require("fs");
@@ -305,6 +306,17 @@ function hasSpamRepetition(text) {
 }
 
 // ---------------------------------------------------------------------
+// Minecraft formatting codes
+// ---------------------------------------------------------------------
+
+const COLOR_CODE_RE = /§[0-9a-fk-or]/gi;
+
+// Strips Minecraft color codes to avoid false positives in the content-safety checks
+function stripColorCodes(text) {
+  return text.replace(COLOR_CODE_RE, "");
+}
+
+// ---------------------------------------------------------------------
 // Combined check
 // ---------------------------------------------------------------------
 
@@ -312,17 +324,21 @@ function hasSpamRepetition(text) {
 // hit never needs a wordlist fetch. Profanity (the only async check, since
 // it fetches remote data) only runs if nothing else already flagged it.
 async function checkContentIssues(text, langId, englishSourceValue, exceptions) {
+  const cleanText = stripColorCodes(text);
+  const cleanSource = englishSourceValue
+    ? stripColorCodes(englishSourceValue)
+    : englishSourceValue;
   const issues = [];
 
-  for (const url of findSuspiciousUrls(text, englishSourceValue)) {
+  for (const url of findSuspiciousUrls(cleanText, cleanSource)) {
     issues.push({ reason: url.reason, detail: url.detail });
   }
-  for (const phone of findPhoneNumbers(text)) {
+  for (const phone of findPhoneNumbers(cleanText)) {
     issues.push({ reason: "phone-number", detail: phone });
   }
-  const html = findHtmlInjection(text);
+  const html = findHtmlInjection(cleanText);
   if (html) issues.push({ reason: "html-injection", detail: html });
-  if (hasSpamRepetition(text)) {
+  if (hasSpamRepetition(cleanText)) {
     issues.push({
       reason: "spam-repetition",
       detail: "repeated character/word pattern",
@@ -337,7 +353,7 @@ async function checkContentIssues(text, langId, englishSourceValue, exceptions) 
     };
   }
 
-  const profanity = await checkProfanity(text, langId, exceptions);
+  const profanity = await checkProfanity(cleanText, langId, exceptions);
   return {
     flagged: profanity.flagged,
     matches: profanity.matches,
@@ -351,9 +367,15 @@ async function checkContentIssues(text, langId, englishSourceValue, exceptions) 
 // File parsing/patching
 // ---------------------------------------------------------------------
 
+// A value of `undefined` in `updates` means "remove this key" (used by the
+// /reject PR command to undo a key that didn't exist before it was flagged),
+// as opposed to setting it to an empty string, which is a real value.
 function patchJsonFile(oldRaw, updates) {
   const obj = JSON.parse(oldRaw);
-  for (const [key, value] of updates) obj[key] = value;
+  for (const [key, value] of updates) {
+    if (value === undefined) delete obj[key];
+    else obj[key] = value;
+  }
   return JSON.stringify(obj, null, 2) + "\n";
 }
 

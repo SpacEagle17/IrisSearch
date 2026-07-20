@@ -66,6 +66,7 @@ async function main() {
             key,
             language: langId,
             oldValue: oldObj[key] ?? "",
+            existedBefore: Object.prototype.hasOwnProperty.call(oldObj, key),
             newValue,
             matchedWords: matches,
             reasons,
