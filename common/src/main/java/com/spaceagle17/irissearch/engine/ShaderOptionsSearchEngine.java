@@ -1,50 +1,17 @@
 package com.spaceagle17.irissearch.engine;
 
-import com.spaceagle17.irissearch.IrisSearch;
-import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 public class ShaderOptionsSearchEngine {
     private static final String WHOLE_WORD_REGEX = "(?<=^|[^a-zA-Z0-9])%s(?=$|[^a-zA-Z0-9])";
     private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
-    private static final Pattern NUMERIC_VALUE_PATTERN = Pattern.compile("[-+]?\\d+(\\.\\d+)?");
-    private static final Pattern COLOR_CODE_PATTERN = Pattern.compile("§.");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
-
-    // Cached Reflection Targets - Minecraft Language
-    private static Object languageInstance = null;
-    private static Method hasMethod = null;
-    private static Method getOrDefaultMethod = null;
-    private static boolean reflectionFailed = false;
-
-    // Cached Reflection Targets - Iris LanguageMap (for en_us default translations)
-    private static Method getCurrentPackMethod = null;
-    private static Method getLanguageMapMethod = null;
-    private static Method getTranslationsMethod = null;
-    private static boolean irisReflectionFailed = false;
-
-    // Cached Iris LanguageMap Reflection State
-    private static boolean irisLanguageCodesFieldLookupFailed = false;
-    private static Field irisLanguageCodesField = null;
-    private static Object cachedIrisPackRef = null;
-
-    // Per-language-code sorted translation snapshots for value.<optionId>.<suffix> prefix scans
-    // keyed by language code (e.g. "en_us", "pl_pl"). Cleared whenever cachedIrisPackRef changes.
-    private static final Map<String, NavigableMap<String, String>> irisValueTranslationsByCode = new ConcurrentHashMap<>();
-    private static final NavigableMap<String, String> EMPTY_SORTED_MAP = new TreeMap<>();
 
     /** Computes the match tier for a given option ID and query.
      * @param optionId The ID of the option to search for.
@@ -61,11 +28,16 @@ public class ShaderOptionsSearchEngine {
             String readableTranslatedName = getReadableTranslatedName(optionId);
             String readableDefaultName = getReadableDefaultName(optionId);
             String rawId = optionId.toLowerCase(Locale.ROOT);
-            String commentText = getLowercaseTranslatedString("option." + optionId + ".comment");
+            String commentText = MinecraftLanguageAccess.getLowercaseString("option." + optionId + ".comment");
 
             String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
             if (tokens.length <= 1) {
-                return computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+                int best = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+                for (String synonym : SearchDictionaries.getSynonyms(trimmedQuery)) {
+                    int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
+                    if (synonymScore > best) best = synonymScore;
+                }
+                return best;
             }
 
             // Multi-word query: every token must appear somewhere (AND), scored via bitwise-AND of each
@@ -74,6 +46,10 @@ public class ShaderOptionsSearchEngine {
             int andScore = -1;
             for (String token : tokens) {
                 int tokenScore = computeTokenTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
+                for (String synonym : SearchDictionaries.getSynonyms(token)) {
+                    int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
+                    if (synonymScore > tokenScore) tokenScore = synonymScore;
+                }
                 if (tokenScore == 0) return 0;
                 andScore &= tokenScore;
             }
@@ -130,7 +106,7 @@ public class ShaderOptionsSearchEngine {
         if (!readableDefaultName.isEmpty() && readableDefaultName.contains(singleQuery))               score |= (1 << 3);
         if (rawId.contains(singleQuery))                                                               score |= (1 << 2);
         if (!commentText.isEmpty() && commentText.contains(singleQuery))                               score |= (1 << 1);
-        if (matchesOptionValueTranslation(optionId, singleQuery)) /* value.<optionId>.<suffix> */      score |= (1);
+        if (IrisShaderPackTranslations.matchesOptionValueTranslation(optionId, singleQuery))           score |= (1); // value.<optionId>.<suffix>
 
         return score;
     }
@@ -247,243 +223,6 @@ public class ShaderOptionsSearchEngine {
         }
     }
 
-    private static void debugLog(String message) {
-        IrisSearchLogger.debugLog("[ShaderOptionsSearchEngine] " + message);
-    }
-
-    static {
-        // Minecraft Language reflection
-        try {
-            // 1. Resolve Class
-            Class<?> languageClass = null;
-            for (String name : new String[]{"net.minecraft.locale.Language", "net.minecraft.class_2477", "net.minecraft.src.C_4907_"}) {
-                try {
-                    languageClass = Class.forName(name);
-                    debugLog("Successfully resolved Language class: " + name);
-                    break;
-                } catch (ClassNotFoundException ignored) {
-                    debugLog("Failed to find Language class with name \"" + name + "\"");
-                }
-            }
-
-            if (languageClass != null) {
-                // 2. Resolve Instance
-                for (String name : new String[]{"getInstance", "method_10517", "m_128107_"}) {
-                    try {
-                        languageInstance = ReflectionUtils.invokeMethod(languageClass, name, new Class<?>[]{});
-                        if (languageInstance != null) {
-                            debugLog("Successfully retrieved Language instance via: " + name + "()");
-                            break;
-                        }
-                    } catch (Throwable ignored) {
-                        debugLog("Failed to find method \"" + name + "\" on Language class");
-                    }
-                }
-
-                // 3. Resolve Methods
-                if (languageInstance != null) {
-                    for (String name : new String[]{"has", "method_4678", "m_6722_"}) {
-                        try {
-                            hasMethod = languageClass.getMethod(name, String.class);
-                            debugLog("Successfully mapped hasMethod via: " + name + "(String)");
-                            break;
-                        } catch (NoSuchMethodException ignored) {
-                            debugLog("Failed to find method \"" + name + "\" on Language class");
-                        }
-                    }
-                    for (String name : new String[]{"getOrDefault", "method_48307", "method_4679", "m_6834_", "m_118919_"}) {
-                        try {
-                            getOrDefaultMethod = languageClass.getMethod(name, String.class);
-                            debugLog("Successfully mapped getOrDefaultMethod via: " + name + "(String)");
-                            break;
-                        } catch (NoSuchMethodException ignored) {
-                            debugLog("Failed to find method \"" + name + "\" on Language class");
-                        }
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            IrisSearchLogger.debugLog("Static reflection initialization failed: " + t);
-        }
-
-        if (languageInstance == null || hasMethod == null || getOrDefaultMethod == null) {
-            reflectionFailed = true;
-            IrisSearch.log(3, "Game translation mapping failed. Search fallback to raw IDs active.");
-        } else {
-            debugLog("Reflection setup completed successfully. All translation handles cached.");
-        }
-
-        // Iris LanguageMap reflection (for en_us default translations)
-        try {
-            Class<?> irisClass = Class.forName("net.irisshaders.iris.Iris");
-            Class<?> shaderPackClass = Class.forName("net.irisshaders.iris.shaderpack.ShaderPack");
-            Class<?> languageMapClass = Class.forName("net.irisshaders.iris.shaderpack.LanguageMap");
-
-            getCurrentPackMethod = irisClass.getMethod("getCurrentPack");
-            getLanguageMapMethod = shaderPackClass.getMethod("getLanguageMap");
-            getTranslationsMethod = languageMapClass.getMethod("getTranslations", String.class);
-
-            debugLog("Iris LanguageMap reflection setup completed.");
-        } catch (Throwable t) {
-            irisReflectionFailed = true;
-            debugLog("Iris LanguageMap reflection setup failed: " + t);
-        }
-    }
-
-    private static String getColorStrippedString(String key) {
-        if (reflectionFailed) return "";
-        try {
-            boolean hasKey = (boolean) hasMethod.invoke(languageInstance, key);
-            if (!hasKey) return "";
-            Object result = getOrDefaultMethod.invoke(languageInstance, key);
-            if (!(result instanceof String)) return "";
-            return COLOR_CODE_PATTERN.matcher((String) result).replaceAll("");
-        } catch (Throwable t) {
-            return "";
-        }
-    }
-
-    public static String getDisplaySettingsName(String screenId) {
-        return getColorStrippedString("screen." + screenId);
-    }
-
-    private static String getLowercaseTranslatedString(String key) {
-        if (reflectionFailed) return "";
-        try {
-            boolean hasKey = (boolean) hasMethod.invoke(languageInstance, key);
-            if (!hasKey) return "";
-
-            Object result = getOrDefaultMethod.invoke(languageInstance, key);
-            if (!(result instanceof String)) return "";
-            String stripped = COLOR_CODE_PATTERN.matcher((String) result).replaceAll("");
-            return stripped.toLowerCase(Locale.ROOT);
-        } catch (Throwable t) {
-            return "";
-        }
-    }
-
-    private static String getLowercaseDefaultTranslatedString(String key) {
-        refreshIrisPackIfNeeded();
-        Map<String, String> translations = getIrisValueTranslationsForCode("en_us");
-        String value = translations.get(key);
-        if (value == null) return "";
-        String stripped = COLOR_CODE_PATTERN.matcher(value).replaceAll("");
-        return stripped.toLowerCase(Locale.ROOT);
-    }
-
-    /**
-     * Refreshes {@link #cachedIrisPackRef} and clears the per-language-code translation cache if the currently
-     * loaded Iris shader pack has changed since the last call. Does nothing if the pack is unchanged
-     */
-    private static void refreshIrisPackIfNeeded() {
-        if (irisReflectionFailed) return;
-        try {
-            @SuppressWarnings("unchecked")
-            Optional<Object> optionalPack = (Optional<Object>) getCurrentPackMethod.invoke(null);
-            Object pack = optionalPack.orElse(null);
-
-            if (pack == cachedIrisPackRef) return;
-
-            cachedIrisPackRef = pack;
-            irisValueTranslationsByCode.clear();
-        } catch (Throwable t) {
-            cachedIrisPackRef = null;
-            irisValueTranslationsByCode.clear();
-        }
-    }
-
-    /**
-     * Retrieves the list of currently active language codes from Iris's mixin-injected {@code languageCodes} field.
-     *  Falls back to {@code List.of("en_us")} if the field is not present or cannot be read.
-     */
-    private static List<String> getActiveIrisLanguageCodes() {
-        List<String> fallback = List.of("en_us");
-        if (irisLanguageCodesFieldLookupFailed || languageInstance == null) return fallback;
-
-        try {
-            if (irisLanguageCodesField == null) {
-                irisLanguageCodesField = ReflectionUtils.getField(languageInstance, "languageCodes");
-                if (irisLanguageCodesField == null) {
-                    irisLanguageCodesFieldLookupFailed = true;
-                    debugLog("Failed to locate Iris's languageCodes field, falling back to " + fallback + " permanently.");
-                    return fallback;
-                }
-                debugLog("Located Iris's mixin-injected \"languageCodes\" field on " + languageInstance.getClass().getName() + ".");
-            }
-
-            Object value = irisLanguageCodesField.get(null);
-            if (value instanceof List<?> rawList && !rawList.isEmpty()) {
-                List<String> codes = new ArrayList<>();
-                for (Object o : rawList) {
-                    if (o instanceof String s) codes.add(s);
-                }
-                if (!codes.isEmpty()) return codes;
-            }
-        } catch (Throwable t) {
-            irisLanguageCodesFieldLookupFailed = true;
-            debugLog("Failed to read Iris's languageCodes field, falling back to " + fallback + " permanently: " + t);
-        }
-
-        return fallback;
-    }
-
-    /**
-     * Retrieves a sorted map of value translations for the given language code, or an empty map if the code cannot be resolved.
-     * Caches the result per language code.
-     */
-    private static NavigableMap<String, String> getIrisValueTranslationsForCode(String code) {
-        if (irisReflectionFailed || cachedIrisPackRef == null) return EMPTY_SORTED_MAP;
-
-        NavigableMap<String, String> cached = irisValueTranslationsByCode.get(code);
-        if (cached != null) return cached;
-
-        NavigableMap<String, String> sorted = EMPTY_SORTED_MAP;
-        try {
-            Object languageMapObj = getLanguageMapMethod.invoke(cachedIrisPackRef);
-            @SuppressWarnings("unchecked")
-            Map<String, String> translations = (Map<String, String>) getTranslationsMethod.invoke(languageMapObj, code);
-            if (translations != null) sorted = new TreeMap<>(translations);
-        } catch (Throwable ignored) {
-            // fall through - cache the empty sentinel below so this code isn't retried every call
-        }
-
-        irisValueTranslationsByCode.put(code, sorted);
-        return sorted;
-    }
-
-    /**
-     * Checks if the given query matches any of the value translations for the specified option ID.
-     */
-    private static boolean matchesOptionValueTranslation(String optionId, String trimmedQuery) {
-        String prefix = "value." + optionId + ".";
-        refreshIrisPackIfNeeded();
-
-        for (String code : getActiveIrisLanguageCodes()) {
-            NavigableMap<String, String> map = getIrisValueTranslationsForCode(code);
-            if (!map.isEmpty() && matchesPrefixRange(map, prefix, trimmedQuery)) return true;
-        }
-        return false;
-    }
-
-    /**
-     * Checks if any entries in the sorted map with keys starting with the given prefix contain the trimmed query.
-     */
-    private static boolean matchesPrefixRange(NavigableMap<String, String> sortedMap, String prefix, String trimmedQuery) {
-        for (Map.Entry<String, String> entry : sortedMap.tailMap(prefix, true).entrySet()) {
-            String key = entry.getKey();
-            if (!key.startsWith(prefix)) break;
-
-            String rawValue = entry.getValue();
-            if (rawValue == null || rawValue.isEmpty()) continue;
-
-            String stripped = COLOR_CODE_PATTERN.matcher(rawValue).replaceAll("").trim();
-            if (stripped.isEmpty() || NUMERIC_VALUE_PATTERN.matcher(stripped).matches()) continue;
-
-            if (stripped.toLowerCase(Locale.ROOT).contains(trimmedQuery)) return true;
-        }
-        return false;
-    }
-
     private static boolean isOnlyAscii(String string) {
         for (int i = 0; i < string.length(); i++) {
             if (string.charAt(i) > 127) return false;
@@ -491,11 +230,22 @@ public class ShaderOptionsSearchEngine {
         return true;
     }
 
+    /** Delegates to {@link MinecraftLanguageAccess} for the currently active game language's translation. */
     public static String getReadableTranslatedName(String optionId) {
-        return getLowercaseTranslatedString("option." + optionId);
+        return MinecraftLanguageAccess.getLowercaseString("option." + optionId);
     }
 
+    /** Delegates to {@link IrisShaderPackTranslations} for the shader pack's own en_us default translation. */
     public static String getReadableDefaultName(String optionId) {
-        return getLowercaseDefaultTranslatedString("option." + optionId);
+        return IrisShaderPackTranslations.getLowercaseDefaultTranslatedString("option." + optionId);
+    }
+
+    /** Delegates to {@link MinecraftLanguageAccess} for a "screen.xxx" translation, e.g. for breadcrumb labels. */
+    public static String getDisplaySettingsName(String screenId) {
+        return MinecraftLanguageAccess.getColorStrippedString("screen." + screenId);
+    }
+
+    private static void debugLog(String message) {
+        IrisSearchLogger.debugLog("[ShaderOptionsSearchEngine] " + message);
     }
 }

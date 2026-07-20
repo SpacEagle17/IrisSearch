@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,13 +14,6 @@ public class ShaderPackSearchEngine {
     private static final Pattern ZIP_EXTENSION_PATTERN = Pattern.compile("\\.zip$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+(?:\\.\\d+){0,3}");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
-
-    // Well-known shader packs, normalized.
-    private static final Set<String> POPULAR_PACK_KEYWORDS = Set.of(
-            "complementaryreimagined", "complementaryunbound", "bliss", "bsl", "solas", "kappa", "spooklementary",
-            "chocapic", "photon", "rethinkingvoxels", "euphoriapatches", "superdupervanilla", "astralex", "sildurs",
-            "nostalgia", "seus", "makeup", "insanity", "lux", "mellow"
-    );
 
     private static final Pattern COMPLEMENTARY_REIMAGINED_PATTERN = Pattern.compile("complementaryreimagined");
     private static final Pattern COMPLEMENTARY_UNBOUND_PATTERN = Pattern.compile("complementaryunbound");
@@ -130,7 +122,7 @@ public class ShaderPackSearchEngine {
     private static boolean computeIsPopular(String readableName) {
         if (readableName == null) return false;
         String normalized = readableName.replaceAll("[^a-z0-9]", "");
-        for (String keyword : POPULAR_PACK_KEYWORDS) {
+        for (String keyword : SearchDictionaries.POPULAR_PACK_KEYWORDS) {
             if (normalized.contains(keyword)) return true;
         }
         return false;
