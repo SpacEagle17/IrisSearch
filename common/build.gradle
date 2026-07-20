@@ -19,6 +19,14 @@ dependencies {
 	// These are compileOnly because the actual implementation comes from Minecraft/loader
 	compileOnly 'org.apache.logging.log4j:log4j-api:2.17.1'
 	compileOnly 'org.apache.logging.log4j:log4j-core:2.17.1'
+
+	testImplementation platform('org.junit:junit-bom:5.10.3')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+	useJUnitPlatform()
 }
 
 tasks.withType(JavaCompile).configureEach {

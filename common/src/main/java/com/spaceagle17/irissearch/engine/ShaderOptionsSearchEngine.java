@@ -134,7 +134,7 @@ public class ShaderOptionsSearchEngine {
     }
 
     /** Whether any whitespace-separated word in {@code readableName} is a close-enough typo of {@code query}. */
-    private static boolean typoMatchesAnyWord(String query, String readableName) {
+    static boolean typoMatchesAnyWord(String query, String readableName) { // package-private for tests
         if (readableName == null || readableName.isEmpty()) return false;
         for (String word : readableName.split("\\s+")) {
             if (isTypoMatch(query, word)) return true;
@@ -146,7 +146,7 @@ public class ShaderOptionsSearchEngine {
      * Checks if {@code query} matches {@code word} within an allowed Levenshtein distance
      * (1 for words <= 6 chars, 2 for longer). Enforces {@link #MIN_TYPO_WORD_LENGTH}.
      */
-    private static boolean isTypoMatch(String query, String word) {
+    static boolean isTypoMatch(String query, String word) { // package-private for tests
         int queryLength = query.length();
         int wordLength = word.length();
         if (queryLength < MIN_TYPO_WORD_LENGTH || wordLength < MIN_TYPO_WORD_LENGTH) return false;
@@ -158,7 +158,7 @@ public class ShaderOptionsSearchEngine {
     }
 
     /** Classic Levenshtein edit distance (insertions/deletions/substitutions) between two strings. */
-    private static int levenshteinDistance(String a, String b) {
+    static int levenshteinDistance(String a, String b) { // package-private for tests
         int[] previousRow = new int[b.length() + 1];
         int[] currentRow = new int[b.length() + 1];
         for (int j = 0; j <= b.length(); j++) previousRow[j] = j;
