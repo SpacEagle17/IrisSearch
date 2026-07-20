@@ -73,42 +73,19 @@ async function resolveStringId(token, projectId, key, cache) {
   const cacheKey = `${projectId}:${key}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-  const filtered = await crowdinRequest(
+  // Crowdin's importer for this project's "json" source file stores each
+  // string's identifier as the literal quoted JSON key (e.g.
+  // `"iris_search.button.search"`, quote characters included) rather than
+  // the bare key - so both forms have to be checked.
+  const quotedKey = JSON.stringify(key);
+  const result = await crowdinRequest(
     token,
     "GET",
     `/projects/${projectId}/strings?filter=${encodeURIComponent(key)}&scope=identifier&limit=500`,
   );
-  let match = (filtered.data || []).find(
-    (item) => item.data.identifier === key,
+  const match = (result.data || []).find(
+    (item) => item.data.identifier === key || item.data.identifier === quotedKey,
   );
-
-  // If the filtered search didn't find it, try fetching all strings and searching manually.
-  let all = null;
-  if (!match) {
-    all = await crowdinRequest(token, "GET", `/projects/${projectId}/strings?limit=500`);
-    match = (all.data || []).find((item) => item.data.identifier === key);
-  }
-
-  if (!match) {
-    // Dump exactly what Crowdin returned so a mismatch (different
-    // separator/casing, unexpected identifier format for this file type,
-    // pagination cutting off the string, etc.) is visible in the log
-    // instead of just "not found".
-    const allData = all ? all.data || [] : [];
-    console.warn(
-      `DEBUG resolveStringId("${key}"): filtered search returned ${
-        (filtered.data || []).length
-      } item(s), unfiltered listing returned ${allData.length} item(s) total.`,
-    );
-    console.warn(
-      `DEBUG filtered identifiers: ${JSON.stringify(
-        (filtered.data || []).map((i) => i.data.identifier),
-      )}`,
-    );
-    console.warn(
-      `DEBUG all identifiers: ${JSON.stringify(allData.map((i) => i.data.identifier))}`,
-    );
-  }
 
   const id = match ? match.data.id : null;
   cache.set(cacheKey, id);
