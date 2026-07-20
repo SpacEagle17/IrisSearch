@@ -14,6 +14,7 @@ public class ShaderPackSearchEngine {
     private static final Pattern COLOR_CODE_PATTERN = Pattern.compile("§.");
     private static final Pattern ZIP_EXTENSION_PATTERN = Pattern.compile("\\.zip$", Pattern.CASE_INSENSITIVE);
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+(?:\\.\\d+){0,3}");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     // Well-known shader packs, normalized.
     private static final Set<String> POPULAR_PACK_KEYWORDS = Set.of(
@@ -39,43 +40,76 @@ public class ShaderPackSearchEngine {
             String readableName = getReadableName(packName);
             if (readableName.isEmpty()) return 0;
 
-            // 1 char ASCII query: only match if the name starts directly with the query.
-            if (trimmedQuery.length() == 1 && isOnlyAscii(trimmedQuery)) {
-                return readableName.startsWith(trimmedQuery) ? 1 : 0;
+            String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
+            if (tokens.length <= 1) {
+                return computeQueryStringTier(readableName, trimmedQuery);
             }
 
-            int score = 0;
-            if (readableName.equals(trimmedQuery)) score |= (1 << 4);
-
-            // Scan every occurrence for word-boundary matches, a query that
-            // sits mid-word at its first occurrence but starts/ends a word at a later one still counts.
-            int qLen = trimmedQuery.length();
-            int idx = readableName.indexOf(trimmedQuery);
-            if (idx != -1) {
-                score |= (1 << 1); // Contains
-
-                boolean anyWordStart = false;
-                boolean anyWholeWord = false;
-                while (idx != -1 && !anyWholeWord) {
-                    boolean startsWord = idx == 0 || !Character.isLetterOrDigit(readableName.charAt(idx - 1));
-                    if (startsWord) {
-                        anyWordStart = true;
-                        int endIdx = idx + qLen;
-                        boolean endsWord = endIdx == readableName.length() || !Character.isLetterOrDigit(readableName.charAt(endIdx));
-                        if (endsWord) anyWholeWord = true;
-                    }
-                    idx = readableName.indexOf(trimmedQuery, idx + 1);
-                }
-
-                if (anyWordStart) score |= (1 << 2);  // Starts a word
-                if (anyWholeWord) score |= (1 << 3);  // Whole word match
+            // Multi-word query: every token must appear somewhere (AND), scored via bitwise-AND of each
+            // token's tier so a bit only survives if *all* tokens satisfy that criterion. OR'd with the
+            // literal-phrase tier so a contiguous match (e.g. "bliss shaders") still outranks scattered tokens.
+            int andScore = -1;
+            for (String token : tokens) {
+                int tokenScore = computeTokenTier(readableName, token);
+                if (tokenScore == 0) return 0;
+                andScore &= tokenScore;
             }
-
-            return score;
+            int phraseScore = computeQueryStringTier(readableName, trimmedQuery);
+            return phraseScore | andScore;
         } catch (Exception e) {
             debugLog("computeMatchTier threw for query \"" + query + "\", treating as no match");
             return 0;
         }
+    }
+
+    /** Computes the match tier of a single query string (one standalone token, or a full phrase) against a readable name. */
+    private static int computeQueryStringTier(String readableName, String singleQuery) {
+        // 1 char ASCII query: only match if the name starts directly with the query.
+        if (singleQuery.length() == 1 && isOnlyAscii(singleQuery)) {
+            return readableName.startsWith(singleQuery) ? 1 : 0;
+        }
+
+        return scanQueryStringTier(readableName, singleQuery);
+    }
+
+    /**
+     * Computes the match tier for a single token in a multi-word AND query.
+     * Unlike {@link #computeQueryStringTier}, this bypasses the 1-character prefix restriction
+     * so partial multi-word queries (e.g., "bloom s") match on word boundaries normally.
+     */
+    private static int computeTokenTier(String readableName, String token) {
+        return scanQueryStringTier(readableName, token);
+    }
+
+    private static int scanQueryStringTier(String readableName, String singleQuery) {
+        int score = 0;
+        if (readableName.equals(singleQuery)) score |= (1 << 4);
+
+        // Scan every occurrence for word-boundary matches, a query that
+        // sits mid-word at its first occurrence but starts/ends a word at a later one still counts.
+        int qLen = singleQuery.length();
+        int idx = readableName.indexOf(singleQuery);
+        if (idx != -1) {
+            score |= (1 << 1); // Contains
+
+            boolean anyWordStart = false;
+            boolean anyWholeWord = false;
+            while (idx != -1 && !anyWholeWord) {
+                boolean startsWord = idx == 0 || !Character.isLetterOrDigit(readableName.charAt(idx - 1));
+                if (startsWord) {
+                    anyWordStart = true;
+                    int endIdx = idx + qLen;
+                    boolean endsWord = endIdx == readableName.length() || !Character.isLetterOrDigit(readableName.charAt(endIdx));
+                    if (endsWord) anyWholeWord = true;
+                }
+                idx = readableName.indexOf(singleQuery, idx + 1);
+            }
+
+            if (anyWordStart) score |= (1 << 2);  // Starts a word
+            if (anyWholeWord) score |= (1 << 3);  // Whole word match
+        }
+
+        return score;
     }
 
     // Strip color codes and the trailing .zip extension -- the name is otherwise already human-readable.

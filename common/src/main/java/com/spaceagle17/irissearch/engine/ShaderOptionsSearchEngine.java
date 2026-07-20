@@ -22,6 +22,7 @@ public class ShaderOptionsSearchEngine {
     private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
     private static final Pattern NUMERIC_VALUE_PATTERN = Pattern.compile("[-+]?\\d+(\\.\\d+)?");
     private static final Pattern COLOR_CODE_PATTERN = Pattern.compile("§.");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     // Cached Reflection Targets - Minecraft Language
     private static Object languageInstance = null;
@@ -59,44 +60,79 @@ public class ShaderOptionsSearchEngine {
 
             String readableTranslatedName = getReadableTranslatedName(optionId);
             String readableDefaultName = getReadableDefaultName(optionId);
-
-            // 1 char Ascii query: only match if a readable name starts directly with the query
-            // Only readableTranslatedName as that feels better
-            if (trimmedQuery.length() == 1 && isOnlyAscii(trimmedQuery)) {
-                return (!readableTranslatedName.isEmpty() && readableTranslatedName.startsWith(trimmedQuery)) ? 1 : 0;
-            }
-
-            String escapedQuery = Pattern.quote(trimmedQuery);
-            Pattern wholeWordPat = Pattern.compile(String.format(WHOLE_WORD_REGEX, escapedQuery));
-            Pattern startsWithPat = Pattern.compile(String.format(STARTS_WITH_REGEX, escapedQuery));
-
             String rawId = optionId.toLowerCase(Locale.ROOT);
             String commentText = getLowercaseTranslatedString("option." + optionId + ".comment");
 
-            // Translated name bits interleaved with default name bits (translated always one bit higher).
-            // Default name bits sit above rawId/comment so en_us matches outrank ID/comment matches.
-            int score = 0;
-            if (!readableTranslatedName.isEmpty() && readableTranslatedName.equals(trimmedQuery))           score |= (1 << 14);
-            if (!readableDefaultName.isEmpty() && readableDefaultName.equals(trimmedQuery))                 score |= (1 << 13);
-            if (!readableTranslatedName.isEmpty() && wholeWordPat.matcher(readableTranslatedName).find())   score |= (1 << 12);
-            if (!readableDefaultName.isEmpty() && wholeWordPat.matcher(readableDefaultName).find())         score |= (1 << 11);
-            if (!readableTranslatedName.isEmpty() && startsWithPat.matcher(readableTranslatedName).find())  score |= (1 << 10);
-            if (!readableDefaultName.isEmpty() && startsWithPat.matcher(readableDefaultName).find())        score |= (1 << 9);
-            if (wholeWordPat.matcher(rawId).find())                                                         score |= (1 << 8);
-            if (!commentText.isEmpty() && wholeWordPat.matcher(commentText).find())                         score |= (1 << 7);
-            if (startsWithPat.matcher(rawId).find())                                                        score |= (1 << 6);
-            if (!commentText.isEmpty() && startsWithPat.matcher(commentText).find())                        score |= (1 << 5);
-            if (!readableTranslatedName.isEmpty() && readableTranslatedName.contains(trimmedQuery))         score |= (1 << 4);
-            if (!readableDefaultName.isEmpty() && readableDefaultName.contains(trimmedQuery))               score |= (1 << 3);
-            if (rawId.contains(trimmedQuery))                                                               score |= (1 << 2);
-            if (!commentText.isEmpty() && commentText.contains(trimmedQuery))                               score |= (1 << 1);
-            if (matchesOptionValueTranslation(optionId, trimmedQuery)) /* value.<optionId>.<suffix> */      score |= (1);
+            String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
+            if (tokens.length <= 1) {
+                return computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+            }
 
-            return score;
+            // Multi-word query: every token must appear somewhere (AND), scored via bitwise-AND of each
+            // token's tier so a bit only survives if *all* tokens satisfy that criterion. OR'd with the
+            // literal-phrase tier so a contiguous match (e.g. "bloom strength") still outranks scattered tokens.
+            int andScore = -1;
+            for (String token : tokens) {
+                int tokenScore = computeTokenTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
+                if (tokenScore == 0) return 0;
+                andScore &= tokenScore;
+            }
+            int phraseScore = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+            return phraseScore | andScore;
         } catch (Exception e) {
             debugLog("computeMatchTier threw for query \"" + query + "\", treating as no match");
             return 0;
         }
+    }
+
+    /** Computes the match tier of a single query string (one standalone token, or a full phrase) against an option's fields. */
+    private static int computeQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
+                                               String readableDefaultName, String rawId, String commentText) {
+        // 1 char Ascii query: only match if a readable name starts directly with the query
+        // Only readableTranslatedName as that feels better
+        if (singleQuery.length() == 1 && isOnlyAscii(singleQuery)) {
+            return (!readableTranslatedName.isEmpty() && readableTranslatedName.startsWith(singleQuery)) ? 1 : 0;
+        }
+
+        return scanQueryStringTier(optionId, singleQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
+    }
+
+    /**
+     * Computes the match tier for a single token in a multi-word AND query.
+     * Unlike {@link #computeQueryStringTier}, this bypasses the 1-character prefix restriction
+     * so partial multi-word queries (e.g., "bloom s") match on word boundaries normally.
+     */
+    private static int computeTokenTier(String optionId, String token, String readableTranslatedName,
+                                         String readableDefaultName, String rawId, String commentText) {
+        return scanQueryStringTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
+    }
+
+    private static int scanQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
+                                            String readableDefaultName, String rawId, String commentText) {
+        String escapedQuery = Pattern.quote(singleQuery);
+        Pattern wholeWordPat = Pattern.compile(String.format(WHOLE_WORD_REGEX, escapedQuery));
+        Pattern startsWithPat = Pattern.compile(String.format(STARTS_WITH_REGEX, escapedQuery));
+
+        // Translated name bits interleaved with default name bits (translated always one bit higher).
+        // Default name bits sit above rawId/comment so en_us matches outrank ID/comment matches.
+        int score = 0;
+        if (!readableTranslatedName.isEmpty() && readableTranslatedName.equals(singleQuery))           score |= (1 << 14);
+        if (!readableDefaultName.isEmpty() && readableDefaultName.equals(singleQuery))                 score |= (1 << 13);
+        if (!readableTranslatedName.isEmpty() && wholeWordPat.matcher(readableTranslatedName).find())  score |= (1 << 12);
+        if (!readableDefaultName.isEmpty() && wholeWordPat.matcher(readableDefaultName).find())        score |= (1 << 11);
+        if (!readableTranslatedName.isEmpty() && startsWithPat.matcher(readableTranslatedName).find()) score |= (1 << 10);
+        if (!readableDefaultName.isEmpty() && startsWithPat.matcher(readableDefaultName).find())       score |= (1 << 9);
+        if (wholeWordPat.matcher(rawId).find())                                                        score |= (1 << 8);
+        if (!commentText.isEmpty() && wholeWordPat.matcher(commentText).find())                        score |= (1 << 7);
+        if (startsWithPat.matcher(rawId).find())                                                       score |= (1 << 6);
+        if (!commentText.isEmpty() && startsWithPat.matcher(commentText).find())                       score |= (1 << 5);
+        if (!readableTranslatedName.isEmpty() && readableTranslatedName.contains(singleQuery))         score |= (1 << 4);
+        if (!readableDefaultName.isEmpty() && readableDefaultName.contains(singleQuery))               score |= (1 << 3);
+        if (rawId.contains(singleQuery))                                                               score |= (1 << 2);
+        if (!commentText.isEmpty() && commentText.contains(singleQuery))                               score |= (1 << 1);
+        if (matchesOptionValueTranslation(optionId, singleQuery)) /* value.<optionId>.<suffix> */      score |= (1);
+
+        return score;
     }
 
     /**
