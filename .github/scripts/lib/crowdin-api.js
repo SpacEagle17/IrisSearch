@@ -83,13 +83,31 @@ async function resolveStringId(token, projectId, key, cache) {
   );
 
   // If the filtered search didn't find it, try fetching all strings and searching manually.
+  let all = null;
   if (!match) {
-    const all = await crowdinRequest(
-      token,
-      "GET",
-      `/projects/${projectId}/strings?limit=500`,
-    );
+    all = await crowdinRequest(token, "GET", `/projects/${projectId}/strings?limit=500`);
     match = (all.data || []).find((item) => item.data.identifier === key);
+  }
+
+  if (!match) {
+    // Dump exactly what Crowdin returned so a mismatch (different
+    // separator/casing, unexpected identifier format for this file type,
+    // pagination cutting off the string, etc.) is visible in the log
+    // instead of just "not found".
+    const allData = all ? all.data || [] : [];
+    console.warn(
+      `DEBUG resolveStringId("${key}"): filtered search returned ${
+        (filtered.data || []).length
+      } item(s), unfiltered listing returned ${allData.length} item(s) total.`,
+    );
+    console.warn(
+      `DEBUG filtered identifiers: ${JSON.stringify(
+        (filtered.data || []).map((i) => i.data.identifier),
+      )}`,
+    );
+    console.warn(
+      `DEBUG all identifiers: ${JSON.stringify(allData.map((i) => i.data.identifier))}`,
+    );
   }
 
   const id = match ? match.data.id : null;
