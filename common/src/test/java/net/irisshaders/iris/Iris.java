@@ -6,8 +6,7 @@ import java.util.Optional;
 
 /**
  * Test-only stand-in for Iris's {@code net.irisshaders.iris.Iris} class. {@code
- * IrisShaderPackTranslations} resolves this by fully-qualified name via reflection, so this fake
- * only needs a static, no-arg {@code getCurrentPack()} returning an {@code Optional<ShaderPack>}.
+ * IrisShaderPackTranslations} resolves this by fully-qualified name via reflection.
  *
  * <p>MUST stay under {@code src/test/java} -- {@code common} never has a real Iris dependency
  * (only the loader modules do), so this is safe there, but it must never leak into {@code
@@ -15,18 +14,25 @@ import java.util.Optional;
  */
 public class Iris {
     private static ShaderPack currentPack;
+    private static String currentPackName = "(off)";
 
     public static Optional<ShaderPack> getCurrentPack() {
         return Optional.ofNullable(currentPack);
     }
 
+    public static String getCurrentPackName() {
+        return currentPackName;
+    }
+
     /** Test hook: sets the "currently loaded" shader pack. */
     public static void setCurrentPack(ShaderPack pack) {
         currentPack = pack;
+        currentPackName = pack != null ? "test-pack" : "(off)";
     }
 
     /** Test hook: clears state back to "no pack loaded" between tests. */
     public static void reset() {
         currentPack = null;
+        currentPackName = "(off)";
     }
 }

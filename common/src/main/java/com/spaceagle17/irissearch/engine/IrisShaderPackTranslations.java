@@ -25,6 +25,7 @@ public final class IrisShaderPackTranslations {
     private static final Pattern NUMERIC_VALUE_PATTERN = Pattern.compile("[-+]?\\d+(\\.\\d+)?");
 
     private static Method getCurrentPackMethod = null;
+    private static Method getCurrentPackNameMethod = null;
     private static Method getLanguageMapMethod = null;
     private static Method getTranslationsMethod = null;
     private static boolean irisReflectionFailed = false;
@@ -45,6 +46,7 @@ public final class IrisShaderPackTranslations {
             Class<?> languageMapClass = Class.forName("net.irisshaders.iris.shaderpack.LanguageMap");
 
             getCurrentPackMethod = irisClass.getMethod("getCurrentPack");
+            getCurrentPackNameMethod = irisClass.getMethod("getCurrentPackName");
             getLanguageMapMethod = shaderPackClass.getMethod("getLanguageMap");
             getTranslationsMethod = languageMapClass.getMethod("getTranslations", String.class);
 
@@ -52,6 +54,17 @@ public final class IrisShaderPackTranslations {
         } catch (Throwable t) {
             irisReflectionFailed = true;
             debugLog("Iris LanguageMap reflection setup failed: " + t);
+        }
+    }
+
+    /** Returns the name of the currently loaded shader pack name */
+    public static String getCurrentPackName() {
+        if (irisReflectionFailed) return null;
+        try {
+            Object result = getCurrentPackNameMethod.invoke(null);
+            return result instanceof String ? (String) result : null;
+        } catch (Throwable t) {
+            return null;
         }
     }
 
