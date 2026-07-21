@@ -49,7 +49,7 @@ public final class SearchDictionaries {
         Set.of("ssr", "screen space reflections", "screen space reflection", "reflections", "reflection"),
         Set.of("ssrr", "screen space refraction", "screen space refractions", "refraction"),
         Set.of("wsr", "world space reflections", "world-space reflections"),
-        Set.of("rtx", "ray tracing", "ray-traced", "ray-tracing", "ray traced", "path tracing", "path traced", "path-tracing", "path-traced"),
+        Set.of("rtx", "ray tracing", "ray-traced", "ray-tracing", "ray traced", "path tracing", "path traced", "path-tracing", "path-traced", "colored lighting", "colored lights"),
         Set.of("sspt", "screen space path tracing"),
         Set.of("pom", "parallax occlusion mapping", "parallax"),
         Set.of("tessellation", "tess", "displacement mapping", "displacement"),
