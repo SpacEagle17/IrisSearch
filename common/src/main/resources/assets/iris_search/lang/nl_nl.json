@@ -2,10 +2,10 @@
   "iris_search.button.search": "Zoeken",
   "iris_search.button.clear": "Leegmaken",
   "iris_search.tooltip.search": "Shader-instellingen Zoeken (Ctrl + F)",
-  "iris_search.tooltip.clear": "Shader-zoeken Verlaten (Esc)",
+  "iris_search.tooltip.clear": "Shader-zoekopdracht Verlaten (Esc)",
   "iris_search.option_search.hint": "Instellingen zoeken...",
-  "iris_search.pack_search.hint": "Search Shader Packs...",
-  "iris_search.pack_search.no_results": "No Shader Pack matches your search",
-  "fml.menu.mods.info.description.iris_search": "A mod which adds a search bar to the Iris mod.",
-  "modmenu.descriptionTranslation.iris_search": "A mod which adds a search bar to the Iris mod."
+  "iris_search.pack_search.hint": "Shader Packs Zoeken...",
+  "iris_search.pack_search.no_results": "Geen enkele Shader Pack komt met jouw zoekopdracht overeen",
+  "fml.menu.mods.info.description.iris_search": "Een mod die een zoekbalk aan de Iris mod toevoegt.",
+  "modmenu.descriptionTranslation.iris_search": "Een mod die een zoekbalk aan de Iris mod toevoegt."
 }
