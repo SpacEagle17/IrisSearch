@@ -4,8 +4,10 @@ import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class ShaderOptionsSearchEngine {
@@ -14,6 +16,7 @@ public class ShaderOptionsSearchEngine {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     private static final int MIN_TYPO_WORD_LENGTH = 4;
+    private static final int MIN_FUZZY_SYNONYM_KEY_LENGTH = 3;
 
     /**
      * Result of {@link #computeMatchTier}, containing an exact/synonym match {@code score}
@@ -43,7 +46,7 @@ public class ShaderOptionsSearchEngine {
             String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
             if (tokens.length <= 1) {
                 int best = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText);
-                for (String synonym : SearchDictionaries.getSynonyms(trimmedQuery)) {
+                for (String synonym : resolveSynonyms(trimmedQuery)) {
                     int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
                     if (synonymScore > best) best = synonymScore;
                 }
@@ -61,7 +64,7 @@ public class ShaderOptionsSearchEngine {
             boolean anyTokenTypo = false;
             for (String token : tokens) {
                 int tokenScore = computeTokenTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText);
-                for (String synonym : SearchDictionaries.getSynonyms(token)) {
+                for (String synonym : resolveSynonyms(token)) {
                     int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText);
                     if (synonymScore > tokenScore) tokenScore = synonymScore;
                 }
@@ -81,6 +84,25 @@ public class ShaderOptionsSearchEngine {
             debugLog("computeMatchTier threw for query \"" + query + "\", treating as no match");
             return new MatchTierResult(0, false);
         }
+    }
+
+    /**
+     * Resolves synonyms for a query token via exact or fuzzy key matching.
+     * Allows partial words (e.g., "godray" for "godrays") and typos to expand to synonym groups.
+     */
+    private static Set<String> resolveSynonyms(String token) {
+        Set<String> exact = SearchDictionaries.getSynonyms(token);
+        if (!exact.isEmpty() || token.length() < MIN_FUZZY_SYNONYM_KEY_LENGTH) return exact;
+
+        Set<String> fuzzy = new HashSet<>();
+        for (String key : SearchDictionaries.getSynonymKeys()) {
+            if (key.indexOf(' ') >= 0 || key.equals(token)) continue; // multi-word keys can't match a single token here
+            if (key.startsWith(token) || isTypoMatch(token, key)) {
+                fuzzy.add(key);
+                fuzzy.addAll(SearchDictionaries.getSynonyms(key));
+            }
+        }
+        return fuzzy;
     }
 
     private static int scanQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,

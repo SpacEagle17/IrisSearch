@@ -45,7 +45,7 @@ public final class SearchDictionaries {
         Set.of("ssgi", "screen space global illumination"),
         Set.of("rtgi", "ray traced global illumination", "raytraced global illumination"),
         Set.of("vxgi", "voxel global illumination", "voxel grid global illumination"),
-        Set.of("vl", "volumetric lighting", "volumetric light", "godrays", "god rays", "crepuscular rays"),
+        Set.of("vl", "volumetric lighting", "volumetric light", "godrays", "god rays", "crepuscular rays", "light shaft"),
         Set.of("ssr", "screen space reflections", "screen space reflection", "reflections", "reflection"),
         Set.of("ssrr", "screen space refraction", "screen space refractions", "refraction"),
         Set.of("wsr", "world space reflections", "world-space reflections"),
@@ -84,5 +84,10 @@ public final class SearchDictionaries {
     /** Returns the known shader-jargon synonyms for a query string (e.g. "ao" -> {"ambient occlusion", ...}), or empty. */
     public static Set<String> getSynonyms(String queryString) {
         return SYNONYM_LOOKUP.getOrDefault(queryString, Set.of());
+    }
+
+    /** Every synonym-group key (abbreviations and full phrases alike), for fuzzy fallback lookups. */
+    public static Set<String> getSynonymKeys() {
+        return SYNONYM_LOOKUP.keySet();
     }
 }

@@ -166,6 +166,28 @@ class ShaderOptionsSearchEngineTest {
         void unrelatedSingleCharQueryIsUnaffectedByTheDictionary() {
             assertFalse(matches("BLOOM_STRENGTH", "a"));
         }
+
+        @Test
+        @DisplayName("Regression: a partial word (missing plural 's') still resolves through the synonym dictionary")
+        void partialWordFuzzyMatchesADictionaryKey() {
+            configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
+            assertTrue(matches("OPT_LIGHTSHAFT", "godray"), "\"godray\" should fuzzy-match the \"godrays\" dictionary key");
+        }
+
+        @Test
+        @DisplayName("A typo'd dictionary key still resolves through fuzzy synonym matching")
+        void typoedDictionaryKeyFuzzyMatches() {
+            configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
+            assertTrue(matches("OPT_LIGHTSHAFT", "godrasy"), "a typo of \"godrays\" should still fuzzy-match the dictionary key");
+        }
+
+        @Test
+        @DisplayName("Fuzzy synonym fallback doesn't fire for short queries or unrelated options")
+        void fuzzySynonymFallbackIsScopedAppropriately() {
+            configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
+            assertFalse(matches("OPT_LIGHTSHAFT", "go"), "too short to trigger fuzzy dictionary matching");
+            assertFalse(matches("BLOOM_STRENGTH", "godray"), "fuzzy synonym match shouldn't leak into unrelated options");
+        }
     }
 
     @Nested
