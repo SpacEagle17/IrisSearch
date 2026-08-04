@@ -71,8 +71,9 @@ class ShaderOptionsSearchEngineTest {
 
     // Mirrors the loader mixins' own match condition: found if there's real score evidence
     // OR the result was only reached via typo-tolerant fallback.
-    private static boolean matches(String optionId, String query) {
-        ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier(optionId, query);
+
+    private static boolean matches(String optionId, String query, String path) {
+        ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier(optionId, query, path);
         return result.score() > 0 || result.typo();
     }
 
@@ -81,24 +82,24 @@ class ShaderOptionsSearchEngineTest {
     class BasicMatching {
         @Test
         void nullInputsReturnNoMatch() {
-            assertFalse(matches(null, "bloom"));
-            assertFalse(matches("BLOOM_STRENGTH", null));
+            assertFalse(matches(null, "bloom", null));
+            assertFalse(matches("BLOOM_STRENGTH", null, null));
         }
 
         @Test
         void emptyOrBlankQueryReturnsNoMatch() {
-            assertFalse(matches("BLOOM_STRENGTH", ""));
-            assertFalse(matches("BLOOM_STRENGTH", "   "));
+            assertFalse(matches("BLOOM_STRENGTH", "", null));
+            assertFalse(matches("BLOOM_STRENGTH", "   ", null));
         }
 
         @Test
         void singleTokenMatchesRawId() {
-            assertTrue(matches("BLOOM_STRENGTH", "bloom"));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom", null));
         }
 
         @Test
         void unrelatedQueryDoesNotMatch() {
-            assertFalse(matches("BLOOM_STRENGTH", "xyz123"));
+            assertFalse(matches("BLOOM_STRENGTH", "xyz123", null));
         }
     }
 
@@ -107,35 +108,35 @@ class ShaderOptionsSearchEngineTest {
     class TokenizedMatching {
         @Test
         void reorderedTokensBothMatch() {
-            assertTrue(matches("BLOOM_STRENGTH", "strength bloom"));
+            assertTrue(matches("BLOOM_STRENGTH", "strength bloom", null));
         }
 
         @Test
         void literalPhraseMatches() {
-            assertTrue(matches("BLOOM_STRENGTH", "bloom strength"));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom strength", null));
         }
 
         @Test
         @DisplayName("Every token must appear somewhere -- one missing token fails the whole query")
         void missingTokenFailsWholeQuery() {
-            assertFalse(matches("BLOOM_STRENGTH", "bloom xyz123"));
+            assertFalse(matches("BLOOM_STRENGTH", "bloom xyz123", null));
         }
 
         @Test
         @DisplayName("Regression: incremental typing through a multi-word query keeps matching at every step")
         void incrementalTypingKeepsMatching() {
-            assertTrue(matches("BLOOM_STRENGTH", "bloom"));
-            assertTrue(matches("BLOOM_STRENGTH", "bloom s"));
-            assertTrue(matches("BLOOM_STRENGTH", "bloom st"));
-            assertTrue(matches("BLOOM_STRENGTH", "bloom str"));
-            assertTrue(matches("BLOOM_STRENGTH", "bloom strength"));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom", null));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom s", null));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom st", null));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom str", null));
+            assertTrue(matches("BLOOM_STRENGTH", "bloom strength", null));
         }
 
         @Test
         @DisplayName("A 1-char second token doesn't wrongly require the whole option to start with it")
         void oneCharTokenDoesNotRequireWholeNameStart() {
-            assertTrue(matches("BLOOM_STRENGTH", "bloom s"));
-            assertFalse(matches("BLOOM", "bloom s")); // BLOOM has no second token to satisfy "s"
+            assertTrue(matches("BLOOM_STRENGTH", "bloom s", null));
+            assertFalse(matches("BLOOM", "bloom s", null)); // BLOOM has no second token to satisfy "s"
         }
     }
 
@@ -144,49 +145,49 @@ class ShaderOptionsSearchEngineTest {
     class Synonyms {
         @Test
         void abbreviationFindsOptionNamedWithTheLongForm() {
-            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ao"));
+            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ao", null));
         }
 
         @Test
         void abbreviationDoesNotMatchUnrelatedOption() {
-            assertFalse(matches("BLOOM_STRENGTH", "ao"));
+            assertFalse(matches("BLOOM_STRENGTH", "ao", null));
         }
 
         @Test
         void abbreviationWorksAsOneTokenOfAMultiWordAndQuery() {
-            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ao strength"));
+            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ao strength", null));
         }
 
         @Test
         void literalFormStillMatchesDirectly() {
-            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ambientocclusion"));
+            assertTrue(matches("AMBIENTOCCLUSION_STRENGTH", "ambientocclusion", null));
         }
 
         @Test
         void unrelatedSingleCharQueryIsUnaffectedByTheDictionary() {
-            assertFalse(matches("BLOOM_STRENGTH", "a"));
+            assertFalse(matches("BLOOM_STRENGTH", "a", null));
         }
 
         @Test
         @DisplayName("Regression: a partial word (missing plural 's') still resolves through the synonym dictionary")
         void partialWordFuzzyMatchesADictionaryKey() {
             configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
-            assertTrue(matches("OPT_LIGHTSHAFT", "godray"), "\"godray\" should fuzzy-match the \"godrays\" dictionary key");
+            assertTrue(matches("OPT_LIGHTSHAFT", "godray", null), "\"godray\" should fuzzy-match the \"godrays\" dictionary key");
         }
 
         @Test
         @DisplayName("A typo'd dictionary key still resolves through fuzzy synonym matching")
         void typoedDictionaryKeyFuzzyMatches() {
             configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
-            assertTrue(matches("OPT_LIGHTSHAFT", "godrasy"), "a typo of \"godrays\" should still fuzzy-match the dictionary key");
+            assertTrue(matches("OPT_LIGHTSHAFT", "godrasy", null), "a typo of \"godrays\" should still fuzzy-match the dictionary key");
         }
 
         @Test
         @DisplayName("Fuzzy synonym fallback doesn't fire for short queries or unrelated options")
         void fuzzySynonymFallbackIsScopedAppropriately() {
             configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
-            assertFalse(matches("OPT_LIGHTSHAFT", "go"), "too short to trigger fuzzy dictionary matching");
-            assertFalse(matches("BLOOM_STRENGTH", "godray"), "fuzzy synonym match shouldn't leak into unrelated options");
+            assertFalse(matches("OPT_LIGHTSHAFT", "go", null), "too short to trigger fuzzy dictionary matching");
+            assertFalse(matches("BLOOM_STRENGTH", "godray", null), "fuzzy synonym match shouldn't leak into unrelated options");
         }
     }
 
@@ -197,28 +198,28 @@ class ShaderOptionsSearchEngineTest {
         @DisplayName("Matches via the active game language's translated name, even when rawId doesn't contain the query")
         void matchesViaTranslatedName() {
             configureOption("OPT_A1B2", "Light Bloom Intensity", null, null, null);
-            assertTrue(matches("OPT_A1B2", "intensity"));
+            assertTrue(matches("OPT_A1B2", "intensity", null));
         }
 
         @Test
         @DisplayName("Matches via the shader pack's own en_us default name, even when rawId/translated name don't contain the query")
         void matchesViaDefaultName() {
             configureOption("OPT_C3D4", null, "Cascaded Shadow Radius", null, null);
-            assertTrue(matches("OPT_C3D4", "cascaded"));
+            assertTrue(matches("OPT_C3D4", "cascaded", null));
         }
 
         @Test
         @DisplayName("Matches via the option's comment text")
         void matchesViaComment() {
             configureOption("OPT_E5F6", null, null, "Adjusts the volumetric fog density.", null);
-            assertTrue(matches("OPT_E5F6", "volumetric"));
+            assertTrue(matches("OPT_E5F6", "volumetric", null));
         }
 
         @Test
         @DisplayName("Matches via a value.<id>.<suffix> value translation")
         void matchesViaValueTranslation() {
             configureOption("OPT_G7H8", null, null, null, Map.of("ULTRA", "Ultra Quality"));
-            assertTrue(matches("OPT_G7H8", "ultra"));
+            assertTrue(matches("OPT_G7H8", "ultra", null));
         }
 
         @Test
@@ -227,8 +228,8 @@ class ShaderOptionsSearchEngineTest {
             configureOption("OPT_TRANSLATED", "Bloom Strength", null, null, null);
             configureOption("OPT_DEFAULT_ONLY", null, "Bloom Radius", null, null);
 
-            int translatedScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_TRANSLATED", "bloom").score();
-            int defaultOnlyScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_DEFAULT_ONLY", "bloom").score();
+            int translatedScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_TRANSLATED", "bloom", null).score();
+            int defaultOnlyScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_DEFAULT_ONLY", "bloom", null).score();
 
             assertTrue(translatedScore > defaultOnlyScore);
         }
@@ -238,7 +239,7 @@ class ShaderOptionsSearchEngineTest {
         void typoToleranceMatchesRealTranslatedName() {
             configureOption("OPT_STRENGTH", "Bloom Strength", null, null, null);
 
-            ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier("OPT_STRENGTH", "strenght");
+            ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier("OPT_STRENGTH", "strenght", null);
 
             assertEquals(0, result.score(), "a typo-only match should carry no real score evidence");
             assertTrue(result.typo());
@@ -256,7 +257,59 @@ class ShaderOptionsSearchEngineTest {
             languageMap.put("es_es", Map.of("value.OPT_MULTILANG.ULTRA", "Calidad Ultra"));
             Iris.setCurrentPack(new ShaderPack(languageMap));
 
-            assertTrue(matches("OPT_MULTILANG", "calidad"));
+            assertTrue(matches("OPT_MULTILANG", "calidad", null));
+        }
+    }
+
+    @Nested
+    @DisplayName("Containing-submenu matching (query matches the submenu name, not the option itself)")
+    class ContainingMenuMatching {
+        @Test
+        @DisplayName("A query matching the submenu name surfaces options inside it, even with no direct match")
+        void queryMatchingMenuNameSurfacesOptionsInsideIt() {
+            Language.addTranslations(Map.of("screen.REFLECTIONS_MENU", "Screen Space Reflections"));
+            configureOption("OPT_QUALITY", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_QUALITY", "reflections", "root/REFLECTIONS_MENU"));
+        }
+
+        @Test
+        @DisplayName("Without path context, the same query does not match")
+        void sameQueryDoesNotMatchWithoutPathContext() {
+            Language.addTranslations(Map.of("screen.REFLECTIONS_MENU", "Screen Space Reflections"));
+            configureOption("OPT_QUALITY", "Quality", null, null, null);
+
+            assertFalse(matches("OPT_QUALITY", "reflections", null));
+        }
+
+        @Test
+        @DisplayName("Root-level options (no submenu) are unaffected by menu matching")
+        void rootLevelOptionIsUnaffected() {
+            Language.addTranslations(Map.of("screen.REFLECTIONS_MENU", "Screen Space Reflections"));
+            configureOption("OPT_QUALITY", "Quality", null, null, null);
+
+            assertFalse(matches("OPT_QUALITY", "reflections", "root"));
+        }
+
+        @Test
+        @DisplayName("A direct option-name match still outranks a menu-only match")
+        void directMatchOutranksMenuOnlyMatch() {
+            Language.addTranslations(Map.of("screen.REFLECTIONS_MENU", "Screen Space Reflections"));
+            configureOption("OPT_DIRECT", "Reflections Strength", null, null, null);
+            configureOption("OPT_VIA_MENU", "Quality", null, null, null);
+
+            int directScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_DIRECT", "reflections", "root").score();
+            int viaMenuScore = ShaderOptionsSearchEngine.computeMatchTier("OPT_VIA_MENU", "reflections", "root/REFLECTIONS_MENU").score();
+
+            assertTrue(directScore > viaMenuScore);
+        }
+
+        @Test
+        @DisplayName("Menu matching also works through the untranslated screen id when no translation exists")
+        void matchesViaRawMenuIdWhenUntranslated() {
+            configureOption("OPT_QUALITY", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_QUALITY", "reflections", "root/REFLECTIONS_MENU"));
         }
     }
 
@@ -320,7 +373,7 @@ class ShaderOptionsSearchEngineTest {
         void matchTierResultSeparatesScoreFromTypoFlag() {
             // No translations configured and "blom" isn't close to the rawId "bloom_strength" as a whole
             // (typo matching only ever checks translated/default names), so this is a clean non-match.
-            ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier("BLOOM_STRENGTH", "blom");
+            ShaderOptionsSearchEngine.MatchTierResult result = ShaderOptionsSearchEngine.computeMatchTier("BLOOM_STRENGTH", "blom", null);
             assertEquals(0, result.score());
             assertFalse(result.typo());
         }
