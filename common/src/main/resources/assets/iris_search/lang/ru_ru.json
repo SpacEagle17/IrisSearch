@@ -4,8 +4,8 @@
   "iris_search.tooltip.search": "Поиск настроек шейдеров (Ctrl + F)",
   "iris_search.tooltip.clear": "Выход из поиска шейдеров (Esc)",
   "iris_search.option_search.hint": "Поиск опций...",
-  "iris_search.pack_search.hint": "Поиск пакетов шейдеров...",
-  "iris_search.pack_search.no_results": "По вашему запросу не найдено ни одного пакета шейдеров",
+  "iris_search.pack_search.hint": "Поиск наборов шейдеров...",
+  "iris_search.pack_search.no_results": "По вашему запросу не найдено ни одного набора шейдеров",
   "fml.menu.mods.info.description.iris_search": "Мод, добавляющий строку поиска в мод Iris.",
   "modmenu.descriptionTranslation.iris_search": "Мод, добавляющий строку поиска в мод Iris."
 }
