@@ -45,7 +45,7 @@ public final class SearchDictionaries {
         Set.of("ssgi", "screen space global illumination"),
         Set.of("rtgi", "ray traced global illumination", "raytraced global illumination"),
         Set.of("vxgi", "voxel global illumination", "voxel grid global illumination"),
-        Set.of("vl", "volumetric lighting", "volumetric light", "godrays", "god rays", "crepuscular rays", "light shaft"),
+        Set.of("vl", "volumetric lighting", "volumetric light", "godrays", "god rays", "crepuscular rays", "light shaft", "light rays", "lightshafts", "volumetric fog"),
         Set.of("ssr", "screen space reflections", "screen space reflection", "reflections", "reflection"),
         Set.of("ssrr", "screen space refraction", "screen space refractions", "refraction"),
         Set.of("wsr", "world space reflections", "world-space reflections"),
@@ -64,7 +64,8 @@ public final class SearchDictionaries {
         Set.of("ca", "chromatic aberration"),
         Set.of("coc", "circle of confusion"),
         Set.of("act", "advanced color tracing"),
-        Set.of("mb", "motion blur", "motionblur", "camera blur")
+        Set.of("mb", "motion blur", "motionblur", "camera blur"),
+        Set.of("better", "improved", "enhanced")
     );
 
     private static final Map<String, Set<String>> SYNONYM_LOOKUP = buildSynonymLookup();

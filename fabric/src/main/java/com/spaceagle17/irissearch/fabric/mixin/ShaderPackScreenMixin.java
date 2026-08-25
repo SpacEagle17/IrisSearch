@@ -653,8 +653,13 @@ public class ShaderPackScreenMixin {
 
             if (ctrlDown && key == GLFW.GLFW_KEY_F) {
                 GuiUtil.playButtonClickSound();
-                irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
-                debugLog("Ctrl+F focused the pack search box");
+                if (isFocused) {
+                    irisSearch$unfocusSearchBox(this.irisSearch$packSearchBox);
+                    debugLog("Ctrl+F unfocused the pack search box");
+                } else {
+                    irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
+                    debugLog("Ctrl+F focused the pack search box");
+                }
                 return true;
             }
         } catch (Throwable t) {

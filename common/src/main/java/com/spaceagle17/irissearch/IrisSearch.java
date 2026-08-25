@@ -7,7 +7,7 @@ import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import java.nio.file.Path;
 
 public class IrisSearch {
-    public static final String VERSION = "1.6.0";
+    public static final String VERSION = "1.6.1";
 
     // Get necessary paths
     public static Path configDirectory = ModLoaderSpecifics.configDirectory();

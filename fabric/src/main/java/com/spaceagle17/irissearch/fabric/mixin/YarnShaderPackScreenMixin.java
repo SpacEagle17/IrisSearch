@@ -644,8 +644,13 @@ public abstract class YarnShaderPackScreenMixin {
 
             if (ctrlDown && key == GLFW.GLFW_KEY_F) {
                 GuiUtil.playButtonClickSound();
-                irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
-                debugLog("Ctrl+F focused the pack search box");
+                if (this.irisSearch$packSearchBox.isFocused()) {
+                    irisSearch$unfocusSearchBox(this.irisSearch$packSearchBox);
+                    debugLog("Ctrl+F unfocused the pack search box");
+                } else {
+                    irisSearch$focusSearchBox(this.irisSearch$packSearchBox);
+                    debugLog("Ctrl+F focused the pack search box");
+                }
                 return true;
             }
         } catch (Throwable t) {
@@ -749,6 +754,10 @@ public abstract class YarnShaderPackScreenMixin {
             debugLog("keyPressed(event): key=" + key + " isEscape=" + isEscape + " ctrlDown=" + ctrlDown);
 
             if (irisSearch$handleSearchKeyPress(key, ctrlDown, isEscape)) {
+                cir.setReturnValue(true);
+                return;
+            }
+            if (irisSearch$handlePackSearchKeyPress(key, ctrlDown, isEscape)) {
                 cir.setReturnValue(true);
             }
         } catch (Throwable t) {
