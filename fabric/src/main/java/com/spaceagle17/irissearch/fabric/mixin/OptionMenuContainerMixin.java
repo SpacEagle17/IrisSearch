@@ -119,6 +119,8 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
             }
 
             String normalizedQuery = query.toLowerCase(Locale.ROOT).trim();
+            // Term with any "menu:" scope prefix stripped
+            String searchTerm = ShaderOptionsSearchEngine.stripMenuScope(normalizedQuery);
 
             Map<String, OptionMenuOptionElement> elementById = new LinkedHashMap<>();
             for (OptionMenuOptionElement el : this.usedOptionElements) {
@@ -135,7 +137,7 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
                 path = irisSearch$getOptionPath(optionId);
                 ShaderOptionsSearchEngine.MatchTierResult match = ShaderOptionsSearchEngine.computeMatchTier(optionId, normalizedQuery, path);
                 if (match.score() > 0 || match.typo()) {
-                    scoredResults.add(new ShaderOptionsSearchEngine.ScoredOptionElement(optionId, ShaderOptionsSearchEngine.getReadableTranslatedName(optionId), ShaderOptionsSearchEngine.getReadableDefaultName(optionId), path, match.score(), match.typo(), normalizedQuery));
+                    scoredResults.add(new ShaderOptionsSearchEngine.ScoredOptionElement(optionId, ShaderOptionsSearchEngine.getReadableTranslatedName(optionId), ShaderOptionsSearchEngine.getReadableDefaultName(optionId), path, match.score(), match.typo(), searchTerm, ShaderOptionsSearchEngine.computeMenuScopeTier(normalizedQuery, path)));
                 }
             }
 

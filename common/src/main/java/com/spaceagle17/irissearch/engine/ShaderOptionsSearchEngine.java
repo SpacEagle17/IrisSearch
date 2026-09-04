@@ -25,10 +25,111 @@ public class ShaderOptionsSearchEngine {
     public record MatchTierResult(int score, boolean typo) {}
 
     /**
+     * A search query split into an optional menu scope and the remaining search term.
+     * {@code "water: caustics"} -> scope {@code ["water"]}, term {@code "caustics"};
+     */
+    public record MenuScopedQuery(List<String> menuScope, String term) {
+        public boolean hasScope() { return !menuScope.isEmpty(); }
+    }
+
+    private static final int MIN_SCOPE_PART_LENGTH = 2;
+
+    /**
+     * Splits a raw query on its first {@code ':'} into a menu scope (before) and a term (after).
+     * The scope may itself be {@code '/'}-separated for nested menus. No colon -> the whole query
+     * is the term. An empty scope (e.g. {@code ":foo"}) is treated as no scope.
+     */
+    public static MenuScopedQuery parseMenuScope(String query) {
+        if (query == null) return new MenuScopedQuery(List.of(), "");
+
+        int colon = query.indexOf(':');
+        if (colon < 0) return new MenuScopedQuery(List.of(), query.trim());
+
+        String scopeRaw = query.substring(0, colon).trim();
+        String term = query.substring(colon + 1).trim();
+        if (scopeRaw.isEmpty()) return new MenuScopedQuery(List.of(), term);
+
+        List<String> parts = new ArrayList<>();
+        for (String part : scopeRaw.split("/")) {
+            String trimmed = part.trim().toLowerCase(Locale.ROOT);
+            if (trimmed.length() >= MIN_SCOPE_PART_LENGTH) parts.add(trimmed);
+        }
+        return new MenuScopedQuery(parts, term);
+    }
+
+    /**
+     * Scores path relevance against scope constraints
+     * Tiers: 3 = exact, 2 = whole-word match, 1 = prefix/substring match. Higher tiers rank first.
+     */
+    static int menuScopeTier(String path, List<String> scopeParts) { // package-private for tests
+        if (scopeParts.isEmpty() || path == null || path.isEmpty()) return 0;
+        String[] segments = path.split("/");
+
+        int weakest = Integer.MAX_VALUE;
+        for (String part : scopeParts) {
+            int bestForPart = 0;
+            for (String segment : segments) {
+                if (segment.isEmpty() || "root".equals(segment)) continue;
+                bestForPart = Math.max(bestForPart, scopePartTierForSegment(segment, part));
+            }
+            if (bestForPart == 0) return 0; // a required part matched nothing
+            weakest = Math.min(weakest, bestForPart);
+        }
+        return weakest == Integer.MAX_VALUE ? 0 : weakest;
+    }
+
+    private static boolean pathMatchesMenuScope(String path, List<String> scopeParts) {
+        return menuScopeTier(path, scopeParts) > 0;
+    }
+
+    public static int computeMenuScopeTier(String query, String path) {
+        MenuScopedQuery scoped = parseMenuScope(query);
+        return scoped.hasScope() ? menuScopeTier(path, scoped.menuScope()) : 0;
+    }
+
+    private static int scopePartTierForSegment(String segmentId, String scopePart) {
+        return Math.max(
+                scopePartTier(segmentId.toLowerCase(Locale.ROOT), scopePart),
+                scopePartTier(resolveMenuName(segmentId), scopePart));
+    }
+
+    private static int scopePartTier(String menuName, String scopePart) {
+        if (menuName.isEmpty()) return 0;
+        if (menuName.equals(scopePart)) return 3;
+        if (allWordsMatch(scopePart, menuName, true)) return 2;
+        if (allWordsMatch(scopePart, menuName, false)) return 1;
+        return 0;
+    }
+
+    private static String resolveMenuName(String screenId) {
+        String active = getReadableMenuName(screenId);
+        if (!active.isEmpty()) return active;
+        if (screenId == null || screenId.isEmpty()) return "";
+        return IrisShaderPackTranslations.getLowercaseDefaultTranslatedString("screen." + screenId).replaceAll("\\s+>", "");
+    }
+
+    private static boolean allWordsMatch(String needle, String haystack, boolean wholeWord) {
+        if (haystack.isEmpty()) return false;
+        String[] words = WHITESPACE_PATTERN.split(needle.trim());
+        if (words.length == 0) return false;
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            String format = wholeWord ? WHOLE_WORD_REGEX : STARTS_WITH_REGEX;
+            Pattern pattern = Pattern.compile(String.format(format, Pattern.quote(word)));
+            if (!pattern.matcher(haystack).find() && !(!wholeWord && haystack.contains(word))) return false;
+        }
+        return true;
+    }
+
+    public static String stripMenuScope(String query) {
+        return parseMenuScope(query).term();
+    }
+
+    /**
      * Computes the match tier for an option ID against a query.
      *
      * @param optionId Option ID to search.
-     * @param query Search string.
+     * @param query Search string. A leading {@code "menu:"} restricts matches to that submenu (see {@link #parseMenuScope}).
      * @param path The option's "root/.../screenId" menu path
      * @return Match result with score and typo status.
      */
@@ -36,8 +137,16 @@ public class ShaderOptionsSearchEngine {
         try {
             if (optionId == null || query == null) return new MatchTierResult(0, false);
 
-            String trimmedQuery = query.toLowerCase(Locale.ROOT).trim();
-            if (trimmedQuery.isEmpty()) return new MatchTierResult(0, false);
+            MenuScopedQuery scoped = parseMenuScope(query);
+            if (scoped.hasScope() && !pathMatchesMenuScope(path, scoped.menuScope())) {
+                return new MatchTierResult(0, false);
+            }
+
+            String trimmedQuery = scoped.term().toLowerCase(Locale.ROOT).trim();
+            if (trimmedQuery.isEmpty()) {
+                // "water:" with no term: every option appears
+                return new MatchTierResult(scoped.hasScope() ? 1 : 0, false);
+            }
 
             String readableTranslatedName = getReadableTranslatedName(optionId);
             String readableDefaultName = getReadableDefaultName(optionId);
@@ -45,7 +154,7 @@ public class ShaderOptionsSearchEngine {
             String commentText = MinecraftLanguageAccess.getLowercaseString("option." + optionId + ".comment");
 
             String menuId = getLastPathSegment(path);
-            String menuTranslatedName = getReadableMenuName(menuId);
+            String menuTranslatedName = resolveMenuName(menuId);
             String menuRawId = menuId != null ? menuId.toLowerCase(Locale.ROOT) : "";
 
             String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
@@ -247,11 +356,17 @@ public class ShaderOptionsSearchEngine {
     // Used to separate "how well does the readable name match" from comment/rawId/menu/value noise.
     private static final int READABLE_NAME_BITS = (1 << 16) | (1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (1 << 11) | (1 << 6) | (1 << 5);
 
-    public record ScoredOptionElement(String optionId, String readableTranslatedName, String readableDefaultName, String path, int score, boolean typo, String query) implements Comparable<ScoredOptionElement> {
+    public record ScoredOptionElement(String optionId, String readableTranslatedName, String readableDefaultName, String path, int score, boolean typo, String query, int menuScopeTier) implements Comparable<ScoredOptionElement> {
+        /** Overload for callers/tests that don't use "menu:" scoping. */
+        public ScoredOptionElement(String optionId, String readableTranslatedName, String readableDefaultName, String path, int score, boolean typo, String query) {
+            this(optionId, readableTranslatedName, readableDefaultName, path, score, typo, query, 0);
+        }
+
         @Override
         public int compareTo(@NotNull ScoredOptionElement other) {
             String q = this.query != null ? this.query.toLowerCase(Locale.ROOT).trim() : "";
             int result;
+            if ((result = compareByMenuScopeTier(this, other))        != 0) return result;
             if ((result = compareByTypoPenalty(this, other))          != 0) return result;
             if ((result = compareByReadableNameQuality(this, other))  != 0) return result;
             if ((result = compareByMatchedWordLength(this, other, q)) != 0) return result;
@@ -262,20 +377,26 @@ public class ShaderOptionsSearchEngine {
             return compareByAlphabetical(this, other);
         }
 
-        // 0. Typo-tolerant matches always rank below any real match.
+        // 0. With a "menu:" scope active, options in a better-matching submenu come first
+        // Always 0 for unscoped queries, not affecting anything below
+        private static int compareByMenuScopeTier(ScoredOptionElement a, ScoredOptionElement b) {
+            return Integer.compare(b.menuScopeTier, a.menuScopeTier);
+        }
+
+        // 1. Typo-tolerant matches always rank below any real match.
         private static int compareByTypoPenalty(ScoredOptionElement a, ScoredOptionElement b) {
             if (a.typo == b.typo) return 0;
             return a.typo ? 1 : -1;
         }
 
-        // 1. Readable-name match quality (translated + default name bits only).
+        // 2. Readable-name match quality (translated + default name bits only).
         private static int compareByReadableNameQuality(ScoredOptionElement a, ScoredOptionElement b) {
             int aReadable = a.score & READABLE_NAME_BITS;
             int bReadable = b.score & READABLE_NAME_BITS;
             return Integer.compare(bReadable, aReadable);
         }
 
-        // 2. Sort by matched-word length (shorter word = higher query coverage = more relevant).
+        // 3. Sort by matched-word length (shorter word = higher query coverage = more relevant).
         // Prefer translated name; fall back to default name if no translated match.
         private static int compareByMatchedWordLength(ScoredOptionElement a, ScoredOptionElement b, String q) {
             if (q.isEmpty()) return 0;
@@ -288,7 +409,7 @@ public class ShaderOptionsSearchEngine {
             return Integer.compare(aLen, bLen);
         }
 
-        // 3. Fewer words in readable name = more precise match.
+        // 4. Fewer words in readable name = more precise match.
         // "Bloom" beats "Bloom Strength" when matched word length ties.
         // Use translated name if available, otherwise fall back to default.
         private static int compareByWordCount(ScoredOptionElement a, ScoredOptionElement b) {
@@ -297,12 +418,12 @@ public class ShaderOptionsSearchEngine {
             return Integer.compare(countWords(aEffective), countWords(bEffective));
         }
 
-        // 4. Full score (comment/rawId matches as secondary signal).
+        // 5. Full score (comment/rawId matches as secondary signal).
         private static int compareByFullScore(ScoredOptionElement a, ScoredOptionElement b) {
             return Integer.compare(b.score, a.score);
         }
 
-        // 5. Prefix boost: either readable name starts with the exact query string.
+        // 6. Prefix boost: either readable name starts with the exact query string.
         private static int compareByPrefixBoost(ScoredOptionElement a, ScoredOptionElement b, String q) {
             if (q.isEmpty()) return 0;
             boolean aPrefixes = (a.readableTranslatedName != null && a.readableTranslatedName.startsWith(q))
@@ -313,12 +434,12 @@ public class ShaderOptionsSearchEngine {
             return aPrefixes ? -1 : 1;
         }
 
-        // 6. Path depth: fewer slashes (shallower) wins.
+        // 7. Path depth: fewer slashes (shallower) wins.
         private static int compareByPathDepth(ScoredOptionElement a, ScoredOptionElement b) {
             return Integer.compare(countSlashes(a.path), countSlashes(b.path));
         }
 
-        // 7. Alphabetical tie-breaker.
+        // 8. Alphabetical tie-breaker.
         private static int compareByAlphabetical(ScoredOptionElement a, ScoredOptionElement b) {
             if (a.optionId != null && b.optionId != null) return a.optionId.compareTo(b.optionId);
             return 0;

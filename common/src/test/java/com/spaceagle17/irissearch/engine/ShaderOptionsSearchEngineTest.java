@@ -332,6 +332,169 @@ class ShaderOptionsSearchEngineTest {
 
             assertTrue(matches("OPT_QUALITY", "reflections", "root/REFLECTIONS_MENU"));
         }
+
+        @Test
+        @DisplayName("Unscoped menu matching is loose: \"water\" also reaches a \"Watermark\" menu (the strict \"menu:\" scope does not - see MenuScopedQueries)")
+        void unscopedMenuMatchingIsLoose() {
+            Language.addTranslations(Map.of("screen.WATERMARK_MENU", "Watermark Settings"));
+            configureOption("OPT_OPACITY", "Opacity", null, null, null);
+
+            assertTrue(matches("OPT_OPACITY", "water", "root/WATERMARK_MENU"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Menu-scoped queries (\"water: caustics\" restricts to the Water submenu)")
+    class MenuScopedQueries {
+        @Test
+        void parsesAPlainQueryAsAllTermNoScope() {
+            ShaderOptionsSearchEngine.MenuScopedQuery scoped = ShaderOptionsSearchEngine.parseMenuScope("bloom strength");
+            assertFalse(scoped.hasScope());
+            assertEquals("bloom strength", scoped.term());
+        }
+
+        @Test
+        void parsesScopeAndTermAroundTheFirstColon() {
+            ShaderOptionsSearchEngine.MenuScopedQuery scoped = ShaderOptionsSearchEngine.parseMenuScope("water: caustics");
+            assertEquals(List.of("water"), scoped.menuScope());
+            assertEquals("caustics", scoped.term());
+        }
+
+        @Test
+        void parsesNestedScopeSeparatedBySlash() {
+            ShaderOptionsSearchEngine.MenuScopedQuery scoped = ShaderOptionsSearchEngine.parseMenuScope("lighting/shadows: bias");
+            assertEquals(List.of("lighting", "shadows"), scoped.menuScope());
+            assertEquals("bias", scoped.term());
+        }
+
+        @Test
+        void emptyScopeBeforeColonIsTreatedAsNoScope() {
+            ShaderOptionsSearchEngine.MenuScopedQuery scoped = ShaderOptionsSearchEngine.parseMenuScope(":caustics");
+            assertFalse(scoped.hasScope());
+            assertEquals("caustics", scoped.term());
+        }
+
+        @Test
+        @DisplayName("A term that matches, inside the scoped menu, is kept")
+        void scopedTermInsideMatchingMenuMatches() {
+            Language.addTranslations(Map.of("screen.WATER_MENU", "Water"));
+            configureOption("OPT_CAUSTICS", "Caustics Strength", null, null, null);
+
+            assertTrue(matches("OPT_CAUSTICS", "water: caustics", "root/WATER_MENU"));
+        }
+
+        @Test
+        @DisplayName("A matching term outside the scoped menu is filtered out")
+        void scopedTermOutsideMenuIsFilteredOut() {
+            Language.addTranslations(Map.of("screen.WATER_MENU", "Water"));
+            configureOption("OPT_CAUSTICS", "Caustics Strength", null, null, null);
+
+            assertFalse(matches("OPT_CAUSTICS", "water: caustics", "root/LIGHTING_MENU"));
+        }
+
+        @Test
+        @DisplayName("A non-matching term inside the scoped menu is still rejected")
+        void scopedNonMatchingTermIsRejected() {
+            Language.addTranslations(Map.of("screen.WATER_MENU", "Water"));
+            configureOption("OPT_CAUSTICS", "Caustics Strength", null, null, null);
+
+            assertFalse(matches("OPT_CAUSTICS", "water: bloom", "root/WATER_MENU"));
+        }
+
+        @Test
+        @DisplayName("An empty term (\"water:\") surfaces every option in the menu and nothing outside it")
+        void emptyTermSurfacesWholeMenu() {
+            Language.addTranslations(Map.of("screen.WATER_MENU", "Water"));
+            configureOption("OPT_IN", "Some Option", null, null, null);
+            configureOption("OPT_OUT", "Some Option", null, null, null);
+
+            assertTrue(matches("OPT_IN", "water:", "root/WATER_MENU"));
+            assertFalse(matches("OPT_OUT", "water:", "root/SKY_MENU"));
+        }
+
+        @Test
+        @DisplayName("Scope resolves against the raw screen id when it has no translation")
+        void scopeMatchesRawScreenId() {
+            configureOption("OPT_Q", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_Q", "reflections: quality", "root/REFLECTIONS_MENU"));
+        }
+
+        @Test
+        @DisplayName("Scope tolerates separators (\"screen space\" ~ \"Screen Space Reflections\")")
+        void scopeToleratesSeparators() {
+            Language.addTranslations(Map.of("screen.SSR_MENU", "Screen Space Reflections"));
+            configureOption("OPT_Q", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_Q", "screen space: quality", "root/SSR_MENU"));
+        }
+
+        @Test
+        @DisplayName("Nested scope requires every part to appear somewhere in the path")
+        void nestedScopeRequiresAllParts() {
+            configureOption("OPT_BIAS", "Bias", null, null, null);
+
+            assertTrue(matches("OPT_BIAS", "lighting/shadows: bias", "root/LIGHTING/SHADOWS"));
+            assertFalse(matches("OPT_BIAS", "lighting/clouds: bias", "root/LIGHTING/SHADOWS"));
+        }
+
+        @Test
+        @DisplayName("\"water:\" still reaches a \"Watermark\" menu (loose), but at a lower tier than a real \"Water\" menu")
+        void looseMenuMatchRanksBelowExact() {
+            Language.addTranslations(Map.of(
+                    "screen.WATER_MENU", "Water",
+                    "screen.WATERMARK_MENU", "Watermark Settings"));
+            configureOption("OPT_A", "Size", null, null, null);
+
+            assertTrue(matches("OPT_A", "water:", "root/WATERMARK_MENU"), "loose menu match still surfaces the option");
+
+            int exactTier = ShaderOptionsSearchEngine.computeMenuScopeTier("water:", "root/WATER_MENU");
+            int looseTier = ShaderOptionsSearchEngine.computeMenuScopeTier("water:", "root/WATERMARK_MENU");
+            assertEquals(3, exactTier);
+            assertEquals(1, looseTier);
+            assertTrue(exactTier > looseTier);
+        }
+
+        @Test
+        @DisplayName("A partial menu name matches (\"atmosphere co\" ~ \"Atmosphere Color\")")
+        void partialMenuNameMatches() {
+            Language.addTranslations(Map.of("screen.ATMO_COLOR", "Atmosphere Color"));
+            configureOption("OPT_HUE", "Hue", null, null, null);
+
+            assertTrue(matches("OPT_HUE", "atmosphere co: hue", "root/ATMO_COLOR"));
+            assertTrue(matches("OPT_HUE", "atmosphere co:", "root/ATMO_COLOR"));
+            // Fully typed scores a higher tier than the abbreviation.
+            assertTrue(ShaderOptionsSearchEngine.computeMenuScopeTier("atmosphere color:", "root/ATMO_COLOR")
+                    > ShaderOptionsSearchEngine.computeMenuScopeTier("atmosphere co:", "root/ATMO_COLOR"));
+        }
+
+        @Test
+        @DisplayName("compareTo puts a better menu-scope tier first regardless of term-match strength")
+        void comparatorHonoursMenuScopeTier() {
+            var strongTermLooseMenu = new ShaderOptionsSearchEngine.ScoredOptionElement(
+                    "A", "caustics", "", "root/WATERMARK", 1 << 14, false, "caustics", 1);
+            var weakTermExactMenu = new ShaderOptionsSearchEngine.ScoredOptionElement(
+                    "B", "water caustics detail", "", "root/WATER", 1 << 5, false, "caustics", 3);
+            assertTrue(weakTermExactMenu.compareTo(strongTermLooseMenu) < 0);
+        }
+
+        @Test
+        @DisplayName("Menu name resolves via the pack's en_us name when the active language lacks a translation for it")
+        void scopeUsesEnglishFallbackForMenuName() {
+            enUsAccumulator.put("screen.REFLECT_MENU", "Reflections");
+            configureOption("OPT_Q", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_Q", "reflections: quality", "root/REFLECT_MENU"));
+        }
+
+        @Test
+        @DisplayName("Scope works for languages without word spacing (CJK menu name)")
+        void scopeWorksForSpacelessLanguages() {
+            Language.addTranslations(Map.of("screen.WATER_MENU", "水面設定"));
+            configureOption("OPT_Q", "Quality", null, null, null);
+
+            assertTrue(matches("OPT_Q", "水面: quality", "root/WATER_MENU"));
+        }
     }
 
     @Nested
