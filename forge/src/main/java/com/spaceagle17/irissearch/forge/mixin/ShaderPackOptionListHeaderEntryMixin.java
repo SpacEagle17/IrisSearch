@@ -296,11 +296,39 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
                                              int mouseX, int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         try {
             MinecraftBridge.queueHeaderTooltip(guiGraphics, this.irisSearch$searchToggleButtonElement,
-                    this.irisSearch$searchToggleTooltipText, x, y - 16);
+                    this.irisSearch$searchToggleTooltipText, x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
             irisSearch$debugLog("Queued search button tooltip in bare render name TAIL inject.");
         } catch (Throwable t) {
             irisSearch$debugLog("Failed queueing search button tooltip (bare render name TAIL): " + t);
         }
+    }
+
+
+    @Unique
+    private int irisSearch$sideButtonWidth() {
+        try {
+            if (this.backButton != null) {
+                Object width = ReflectionUtils.getFieldValue(this.backButton, "width");
+                if (width instanceof Integer i) {
+                    return i;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return 0;
+    }
+
+
+    @Unique
+    private boolean irisSearch$searchBoxIsEmpty() {
+        try {
+            if (irisSearch$resolveOuterList() instanceof ISearchableOptionList list) {
+                String query = list.irisSearch$getTypedSearchQuery();
+                return query == null || query.isEmpty();
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
     }
 
     @Unique
@@ -363,7 +391,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
 
             try {
                 MinecraftBridge.queueHeaderTooltip(guiGraphics, this.irisSearch$searchToggleButtonElement,
-                        this.irisSearch$searchToggleTooltipText, x, y - 16);
+                        this.irisSearch$searchToggleTooltipText, x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
                 irisSearch$debugLog("Queued search button tooltip during suppressed render.");
             } catch (Throwable t) {
                 irisSearch$debugLog("Could not queue the search button tooltip during suppressed render: " + t);

@@ -6,6 +6,8 @@
   "iris_search.option_search.hint": "Buscar ajustes...",
   "iris_search.pack_search.hint": "Buscar shaders...",
   "iris_search.pack_search.no_results": "Ningún shader coincide con tu búsqueda",
+  "iris_search.option_search.tip.menu": "§7Consejo: §r§enombre:§r buscar dentro de un menú - §eagua:§r espuma",
+  "iris_search.option_search.tip.changed": "§7Consejo: §r§e*§r mostrar solo opciones modificadas - §e*§restrellas",
   "fml.menu.mods.info.description.iris_search": "Un mod que añade una barra de búsqueda al mod Iris.",
   "modmenu.descriptionTranslation.iris_search": "Un mod que añade una barra de búsqueda al mod Iris."
 }

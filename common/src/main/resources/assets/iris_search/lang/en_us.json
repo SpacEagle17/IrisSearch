@@ -6,6 +6,8 @@
   "iris_search.option_search.hint": "Search Options...",
   "iris_search.pack_search.hint": "Search Shader Packs...",
   "iris_search.pack_search.no_results": "No Shader Pack matches your search",
+  "iris_search.option_search.tip.menu": "§7Tip: §r§ename:§r search within a menu - §ewater:§r foam",
+  "iris_search.option_search.tip.changed": "§7Tip: §r§e*§r show only changed options - §e*§remissive",
   "fml.menu.mods.info.description.iris_search": "A mod which adds a search bar to the Iris mod.",
   "modmenu.descriptionTranslation.iris_search": "A mod which adds a search bar to the Iris mod."
 }

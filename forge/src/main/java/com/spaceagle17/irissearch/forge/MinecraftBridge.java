@@ -3,9 +3,9 @@ package com.spaceagle17.irissearch.forge;
 import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
+import com.spaceagle17.irissearch.util.SearchHints;
 import net.minecraft.client.Minecraft;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -270,12 +270,25 @@ public class MinecraftBridge {
         return null;
     }
 
-    /**
-     * Queues a hover/focus-conditional tooltip via Iris's TOP_LAYER_RENDER_QUEUE, matching
-     * how Iris's own HeaderEntry draws its button tooltips. Silently no-ops on any failure
-     * since a missing tooltip is cosmetic, not worth crashing the row over.
-     */
-    public static void queueHeaderTooltip(Object guiGraphics, Object buttonElement, String tooltipKey, int x, int y) {
+    private static final String CLEAR_TOOLTIP_KEY = "iris_search.tooltip.clear";
+
+    /** Returns the animated tooltip while hovering the clear button or {@code null}. */
+    private static Object rotatingSyntaxHintLine(String tooltipKey) {
+        if (!CLEAR_TOOLTIP_KEY.equals(tooltipKey)) {
+            return null;
+        }
+        String key = SearchHints.currentRotatingTipKey();
+        if (key == null) {
+            return null;
+        }
+        Object hint = createTranslatableComponent(key);
+        Object countdown = createLiteralComponent(SearchHints.countdownSuffix());
+        return (hint != null && countdown != null) ? appendComponent(hint, countdown) : hint;
+    }
+
+    /** Queues a hover/focus header button tooltip with optional rotating search syntax hints, failing silently on error. */
+    public static void queueHeaderTooltip(Object guiGraphics, Object buttonElement, String tooltipKey,
+                                          int x, int y, int sideButtonWidth, boolean allowSyntaxHint) {
         if (buttonElement == null || tooltipKey == null || guiGraphics == null) {
             return;
         }
@@ -283,15 +296,12 @@ public class MinecraftBridge {
         try {
             boolean hovered = Boolean.TRUE.equals(ReflectionUtils.invokeMethod(buttonElement, "isHovered", new Class<?>[]{}));
             boolean focused = Boolean.TRUE.equals(ReflectionUtils.invokeMethod(buttonElement, "isFocused", new Class<?>[]{}));
-            debugLog("queueHeaderTooltip: hovered = " + hovered + ", focused = " + focused);
             if (!hovered && !focused) {
                 return;
             }
 
             Object font = getMinecraftFont();
-            debugLog("queueHeaderTooltip: font = " + font);
             Object textComponent = createTranslatableComponent(tooltipKey);
-            debugLog("queueHeaderTooltip: textComponent = " + textComponent);
             if (font == null || textComponent == null) {
                 debugLog("Skipping tooltip draw: font or text component unavailable.");
                 return;
@@ -311,16 +321,22 @@ public class MinecraftBridge {
                 return;
             }
 
+            Object hintLine = allowSyntaxHint ? rotatingSyntaxHintLine(tooltipKey) : null;
+            int hintX = x + sideButtonWidth + SearchHints.HINT_LEFT_GAP;
+            int hintY = y + SearchHints.HINT_ROW_OFFSET_Y;
+
             Runnable task = () -> {
                 try {
                     drawTextPanel.invoke(null, font, guiGraphics, textComponent, x, y);
+                    if (hintLine != null) {
+                        drawTextPanel.invoke(null, font, guiGraphics, hintLine, hintX, hintY);
+                    }
                 } catch (Throwable t) {
                     debugLog("Tooltip draw task failed: " + t);
                 }
             };
 
-            Method addMethod = renderQueue.getClass().getMethod("add", Object.class);
-            addMethod.invoke(renderQueue, task);
+            renderQueue.getClass().getMethod("add", Object.class).invoke(renderQueue, task);
         } catch (Throwable t) {
             IrisSearch.log(3, "Couldn't show the search button tooltip." + t);
             debugLog("queueHeaderTooltip failed: " + t);

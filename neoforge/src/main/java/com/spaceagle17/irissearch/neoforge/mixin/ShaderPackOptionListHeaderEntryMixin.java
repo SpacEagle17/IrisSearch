@@ -248,7 +248,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
                                              int mouseX, int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         try {
             MinecraftBridge.queueHeaderTooltip(guiGraphics, this.irisSearch$searchToggleButtonElement,
-                    this.irisSearch$searchToggleTooltipText, x, y - 16);
+                    this.irisSearch$searchToggleTooltipText, x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
         } catch (Throwable t) {
             irisSearch$debugLog("Failed queueing search button tooltip (bare render name TAIL): " + t);
         }
@@ -267,10 +267,38 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
             int x = MinecraftBridge.invokeIntGetter(this, "getX", null, 0);
             int y = MinecraftBridge.invokeIntGetter(this, "getY", null, 0);
             MinecraftBridge.queueHeaderTooltip(guiGraphics, this.irisSearch$searchToggleButtonElement,
-                    this.irisSearch$searchToggleTooltipText, x, y - 16);
+                    this.irisSearch$searchToggleTooltipText, x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
         } catch (Throwable t) {
             irisSearch$debugLog("Failed queueing search button tooltip (official extractContent path): " + t);
         }
+    }
+
+
+    @Unique
+    private int irisSearch$sideButtonWidth() {
+        try {
+            if (this.backButton != null) {
+                Object width = ReflectionUtils.getFieldValue(this.backButton, "width");
+                if (width instanceof Integer i) {
+                    return i;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return 0;
+    }
+
+
+    @Unique
+    private boolean irisSearch$searchBoxIsEmpty() {
+        try {
+            if (irisSearch$resolveOuterList() instanceof ISearchableOptionList list) {
+                String query = list.irisSearch$getTypedSearchQuery();
+                return query == null || query.isEmpty();
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
     }
 
     @Unique
@@ -333,7 +361,7 @@ public abstract class ShaderPackOptionListHeaderEntryMixin implements ISearchabl
 
             try {
                 MinecraftBridge.queueHeaderTooltip(guiGraphics, this.irisSearch$searchToggleButtonElement,
-                        this.irisSearch$searchToggleTooltipText, x, y - 16);
+                        this.irisSearch$searchToggleTooltipText, x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
             } catch (Throwable t) {
                 irisSearch$debugLog("Could not queue the search button tooltip during suppressed render: " + t);
             }

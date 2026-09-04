@@ -31,6 +31,34 @@ public abstract class YarnShaderPackOptionListHeaderEntryMixin {
         IrisSearchLogger.debugLog("[YarnShaderPackOptionListHeaderEntryMixin] " + message);
     }
 
+
+    @Unique
+    private int irisSearch$sideButtonWidth() {
+        try {
+            if (this.backButton != null) {
+                Object width = ReflectionUtils.getFieldValue(this.backButton, "width");
+                if (width instanceof Integer i) {
+                    return i;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return 0;
+    }
+
+
+    @Unique
+    private boolean irisSearch$searchBoxIsEmpty() {
+        try {
+            if (irisSearch$resolveOuterList() instanceof ISearchableOptionList list) {
+                String query = list.irisSearch$getTypedSearchQuery();
+                return query == null || query.isEmpty();
+            }
+        } catch (Throwable ignored) {
+        }
+        return true;
+    }
+
     @Unique
     private Object irisSearch$resolveOuterList() {
         Object listObj = ReflectionUtils.getFieldValue(this, "this$0");
@@ -77,7 +105,7 @@ public abstract class YarnShaderPackOptionListHeaderEntryMixin {
             try {
                 ISearchableHeaderEntry entry = (ISearchableHeaderEntry) this;
                 MinecraftBridge.queueHeaderTooltip(guiGraphics, entry.irisSearch$getSearchToggleButton(),
-                        entry.irisSearch$getSearchToggleTooltipText(), x, y - 16);
+                        entry.irisSearch$getSearchToggleTooltipText(), x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
             } catch (Throwable t) {
                 IrisSearch.log(3, "Couldn't show the search button tooltip while searching." + t);
                 debugLog("Failed queueing tooltip from suppressed render path: " + t);
@@ -129,7 +157,7 @@ public abstract class YarnShaderPackOptionListHeaderEntryMixin {
             }
             int x = MinecraftBridge.invokeIntGetter(this, "getX", "method_46426", 0);
             int y = MinecraftBridge.invokeIntGetter(this, "getY", "method_46427", 0);
-            MinecraftBridge.queueHeaderTooltip(guiGraphics, btn, entry.irisSearch$getSearchToggleTooltipText(), x, y - 16);
+            MinecraftBridge.queueHeaderTooltip(guiGraphics, btn, entry.irisSearch$getSearchToggleTooltipText(), x, y - 16, irisSearch$sideButtonWidth(), irisSearch$searchBoxIsEmpty());
         } catch (Throwable t) {
             debugLog("Failed queueing search button tooltip (typed 5-param TAIL): " + t);
         }
