@@ -511,6 +511,16 @@ public class ShaderPackScreenMixin {
     }
 
     @Unique
+    private boolean irisSearch$isSearchBoxFocused(Object box) {
+        try {
+            return Boolean.TRUE.equals(ReflectionUtils.invokeMethod(box, "isFocused", new Class<?>[]{}));
+        } catch (Throwable t) {
+            debugLog("Failed to query search box focus state: " + t);
+            return false;
+        }
+    }
+
+    @Unique
     private void irisSearch$unfocusSearchBox(Object box) {
         try {
             ReflectionUtils.invokeMethod(box, "setFocused", new Class<?>[]{boolean.class}, false);
@@ -688,13 +698,18 @@ public class ShaderPackScreenMixin {
             if (ctrlDown && key == GLFW.GLFW_KEY_F && this.optionMenuOpen && !searchable.irisSearch$isOnSubScreen()) {
                 GuiUtil.playButtonClickSound();
 
-                if (searchable.irisSearch$isSearchModeActive()) {
-                    searchable.irisSearch$disableSearchModeAndRebuild();
-                } else {
+                if (!searchable.irisSearch$isSearchModeActive()) {
                     searchable.irisSearch$enableSearchModeAndRebuild();
+                    debugLog("Ctrl+F enabled search mode");
+                } else if (this.irisSearch$searchBox != null && !irisSearch$isSearchBoxFocused(this.irisSearch$searchBox)
+                        && !searchable.irisSearch$getTypedSearchQuery().isEmpty()) {
+                    // Search is open with a query but the box lost focus, re-focus it
+                    irisSearch$focusSearchBox(this.irisSearch$searchBox);
+                    debugLog("Ctrl+F re-focused the search box");
+                } else {
+                    searchable.irisSearch$disableSearchModeAndRebuild();
+                    debugLog("Ctrl+F disabled search mode");
                 }
-
-                debugLog("Ctrl+F toggled search mode");
                 return true;
             }
         } catch (Throwable t) {

@@ -741,13 +741,18 @@ public abstract class ShaderPackScreenMixin {
             if (ctrlDown && key == GLFW.GLFW_KEY_F && this.optionMenuOpen && !searchable.irisSearch$isOnSubScreen()) {
                 GuiUtil.playButtonClickSound();
 
-                if (searchable.irisSearch$isSearchModeActive()) {
-                    searchable.irisSearch$disableSearchModeAndRebuild();
-                } else {
+                if (!searchable.irisSearch$isSearchModeActive()) {
                     searchable.irisSearch$enableSearchModeAndRebuild();
+                    irisSearch$debugLog("Ctrl+F enabled search mode");
+                } else if (this.irisSearch$searchBox != null && !this.irisSearch$searchBox.isFocused()
+                        && !searchable.irisSearch$getTypedSearchQuery().isEmpty()) {
+                    // Search is open with a query but the box lost focus, re-focus it
+                    irisSearch$focusSearchBox(this.irisSearch$searchBox);
+                    irisSearch$debugLog("Ctrl+F re-focused the search box");
+                } else {
+                    searchable.irisSearch$disableSearchModeAndRebuild();
+                    irisSearch$debugLog("Ctrl+F disabled search mode");
                 }
-
-                irisSearch$debugLog("Ctrl+F toggled search mode");
                 return true;
             }
         } catch (Throwable t) {

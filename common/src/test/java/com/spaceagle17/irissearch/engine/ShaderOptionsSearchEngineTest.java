@@ -189,6 +189,27 @@ class ShaderOptionsSearchEngineTest {
             assertFalse(matches("OPT_LIGHTSHAFT", "go", null), "too short to trigger fuzzy dictionary matching");
             assertFalse(matches("BLOOM_STRENGTH", "godray", null), "fuzzy synonym match shouldn't leak into unrelated options");
         }
+
+        @Test
+        @DisplayName("\"dh\" resolves to a Distant Horizons option")
+        void dhAbbreviationResolvesToDistantHorizons() {
+            configureOption("OPT_DH_QUALITY", "Distant Horizons Quality", null, null, null);
+            assertTrue(matches("OPT_DH_QUALITY", "dh", null));
+        }
+
+        @Test
+        @DisplayName("\"wind\" surfaces a waving-animation option")
+        void windResolvesToTheWavingGroup() {
+            configureOption("OPT_WAVE", "Waving Foliage", null, null, null);
+            assertTrue(matches("OPT_WAVE", "wind", null));
+        }
+
+        @Test
+        @DisplayName("\"vibrance\" and \"saturation\" are interchangeable")
+        void vibranceResolvesToSaturation() {
+            configureOption("OPT_SAT", "Saturation", null, null, null);
+            assertTrue(matches("OPT_SAT", "vibrance", null));
+        }
     }
 
     @Nested
