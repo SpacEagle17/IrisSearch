@@ -125,6 +125,20 @@ public class ShaderOptionsSearchEngine {
         return parseMenuScope(query).term();
     }
 
+    /** Changed when starts with a {@code '*'} */
+    public static boolean isChangedOnlyQuery(String query) {
+        return query != null && query.trim().startsWith("*");
+    }
+
+    /** The query with any leading {@code '*'} changed-only markers and surrounding whitespace removed. */
+    public static String stripChangedOnlyMarker(String query) {
+        if (query == null) return "";
+        String trimmed = query.trim();
+        int i = 0;
+        while (i < trimmed.length() && trimmed.charAt(i) == '*') i++;
+        return trimmed.substring(i).trim();
+    }
+
     /**
      * Computes the match tier for an option ID against a query.
      *

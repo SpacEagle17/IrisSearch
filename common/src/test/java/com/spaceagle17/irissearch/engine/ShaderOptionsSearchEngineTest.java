@@ -498,6 +498,37 @@ class ShaderOptionsSearchEngineTest {
     }
 
     @Nested
+    @DisplayName("\"*\" changed-settings marker parsing")
+    class ChangedOnlyMarker {
+        @Test
+        void detectsLeadingStar() {
+            assertTrue(ShaderOptionsSearchEngine.isChangedOnlyQuery("*emissive"));
+            assertTrue(ShaderOptionsSearchEngine.isChangedOnlyQuery("  * emissive"));
+            assertTrue(ShaderOptionsSearchEngine.isChangedOnlyQuery("*"));
+            assertFalse(ShaderOptionsSearchEngine.isChangedOnlyQuery("emissive"));
+            assertFalse(ShaderOptionsSearchEngine.isChangedOnlyQuery("emi*ssive"));
+            assertFalse(ShaderOptionsSearchEngine.isChangedOnlyQuery(null));
+        }
+
+        @Test
+        void stripsTheMarkerAndSurroundingWhitespace() {
+            assertEquals("emissive", ShaderOptionsSearchEngine.stripChangedOnlyMarker("*emissive"));
+            assertEquals("emissive", ShaderOptionsSearchEngine.stripChangedOnlyMarker("* emissive"));
+            assertEquals("emissive", ShaderOptionsSearchEngine.stripChangedOnlyMarker("  **  emissive "));
+            assertEquals("", ShaderOptionsSearchEngine.stripChangedOnlyMarker("*"));
+            assertEquals("water: caustics", ShaderOptionsSearchEngine.stripChangedOnlyMarker("*water: caustics"));
+        }
+
+        @Test
+        @DisplayName("Composes with menu scoping: \"*water: blue\" -> changed + Water menu + \"blue\"")
+        void composesWithMenuScope() {
+            String afterStar = ShaderOptionsSearchEngine.stripChangedOnlyMarker("*water: blue");
+            assertEquals(List.of("water"), ShaderOptionsSearchEngine.parseMenuScope(afterStar).menuScope());
+            assertEquals("blue", ShaderOptionsSearchEngine.stripMenuScope(afterStar));
+        }
+    }
+
+    @Nested
     @DisplayName("Typo tolerance (algorithm-level, no translations required)")
     class TypoTolerance {
         @Test

@@ -1,6 +1,7 @@
 package com.spaceagle17.irissearch.fabric.mixin;
 
 import com.spaceagle17.irissearch.IrisSearch;
+import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.engine.ShaderOptionsSearchEngine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.fabric.ISearchableOptionContainer;
@@ -118,9 +119,20 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
                 return;
             }
 
-            String normalizedQuery = query.toLowerCase(Locale.ROOT).trim();
+            // Leading "*" restricts results to only changed options (e.g. "*emissive").
+            boolean changedOnly = ShaderOptionsSearchEngine.isChangedOnlyQuery(query);
+            String normalizedQuery = ShaderOptionsSearchEngine.stripChangedOnlyMarker(query).toLowerCase(Locale.ROOT);
             // Term with any "menu:" scope prefix stripped
-            String searchTerm = ShaderOptionsSearchEngine.stripMenuScope(normalizedQuery);
+            String searchQuery = ShaderOptionsSearchEngine.stripMenuScope(normalizedQuery);
+
+            // null when this isn't a "*" query, or when option values can't be read (degrade to a normal search).
+            Set<String> changedIds = changedOnly ? irisSearch$collectChangedOptionIds() : null;
+
+            if (normalizedQuery.isEmpty() && changedIds == null) {
+                irisSearch$restoreOriginalLayout();
+                debugLog("Query was only markers, restored original layout");
+                return;
+            }
 
             Map<String, OptionMenuOptionElement> elementById = new LinkedHashMap<>();
             for (OptionMenuOptionElement el : this.usedOptionElements) {
@@ -132,22 +144,60 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
             List<String> allFlatOptionIds = ShaderOptionsSearchEngine.getAllOptionsFlattened(new ArrayList<>(elementById.keySet()));
             List<ShaderOptionsSearchEngine.ScoredOptionElement> scoredResults = new ArrayList<>();
 
-            String path;
             for (String optionId : allFlatOptionIds) {
-                path = irisSearch$getOptionPath(optionId);
+                if (changedIds != null && !changedIds.contains(optionId)) continue;
+                String path = irisSearch$getOptionPath(optionId);
+
+                if (normalizedQuery.isEmpty()) { // bare "*": list every changed option, unscored
+                    scoredResults.add(irisSearch$scored(optionId, path, 1, false, "", 0));
+                    continue;
+                }
+
                 ShaderOptionsSearchEngine.MatchTierResult match = ShaderOptionsSearchEngine.computeMatchTier(optionId, normalizedQuery, path);
                 if (match.score() > 0 || match.typo()) {
-                    scoredResults.add(new ShaderOptionsSearchEngine.ScoredOptionElement(optionId, ShaderOptionsSearchEngine.getReadableTranslatedName(optionId), ShaderOptionsSearchEngine.getReadableDefaultName(optionId), path, match.score(), match.typo(), searchTerm, ShaderOptionsSearchEngine.computeMenuScopeTier(normalizedQuery, path)));
+                    scoredResults.add(irisSearch$scored(optionId, path, match.score(), match.typo(),
+                            searchQuery, ShaderOptionsSearchEngine.computeMenuScopeTier(normalizedQuery, path)));
                 }
             }
 
             scoredResults.sort(null);
 
             irisSearch$applyFilteredLayout(scoredResults, elementById);
-            debugLog("Search query \"" + query + "\" -> " + scoredResults.size() + " match(es)");
+            debugLog("Search query \"" + query + "\" -> " + scoredResults.size() + " match(es)" + (changedIds != null ? " [changed only]" : ""));
         } catch (Exception e) {
             IrisSearch.log(3, "Failed to apply search query.: " + e);
             debugLog("setSearchQuery failed for query \"" + query + "\": " + e);
+        }
+    }
+
+    @Unique
+    private ShaderOptionsSearchEngine.ScoredOptionElement irisSearch$scored(String optionId, String path, int score, boolean typo, String query, int menuScopeTier) {
+        return new ShaderOptionsSearchEngine.ScoredOptionElement(optionId,
+                ShaderOptionsSearchEngine.getReadableTranslatedName(optionId),
+                ShaderOptionsSearchEngine.getReadableDefaultName(optionId),
+                path, score, typo, query, menuScopeTier);
+    }
+
+    // Returns option IDs that have been changed or are pending or {@code null} on failure.
+    @Unique
+    private Set<String> irisSearch$collectChangedOptionIds() {
+        try {
+            Object values = null;
+            for (OptionMenuOptionElement el : this.usedOptionElements) {
+                if (el != null && (values = ReflectionUtils.invokeMethod(el, "getPendingOptionValues", new Class<?>[]{})) != null) break;
+            }
+            if (values == null) return null;
+
+            Set<String> changed = new HashSet<>();
+            for (String getter : new String[]{"getBooleanValues", "getStringValues"}) {
+                if (ReflectionUtils.invokeMethod(values, getter, new Class<?>[]{}) instanceof Map<?, ?> map) {
+                    map.keySet().forEach(k -> changed.add(String.valueOf(k)));
+                }
+            }
+            return changed;
+        } catch (Throwable t) {
+            debugLog("'*' changed-only filter unavailable: " + t);
+            return null;
         }
     }
 
