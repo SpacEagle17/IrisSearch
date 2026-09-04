@@ -84,7 +84,7 @@ public final class SearchDictionaries {
         Set.of("sscs", "contact shadows", "screen space contact shadows", "screen space shadows"),
         Set.of("torchlight", "torch light", "blocklight", "block light"),
         Set.of("handheldlight", "handheld light", "held light", "hand light", "dynamic light", "dynamic lights", "moving light"),
-        Set.of("waving", "waving plants", "waving foliage", "waving grass", "waving entities", "wind", "wind effect", "foliage sway"),
+        Set.of("waving", "waving plants", "waving foliage", "waving grass", "waving entities", "wind", "wind effect", "foliage sway", "wave"),
         Set.of("wetness", "wet surfaces", "puddles", "rain puddles", "rain wetness"),
         Set.of("dh", "distant horizons", "distanthorizons"),
         Set.of("better", "improved", "enhanced")
