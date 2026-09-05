@@ -7,5 +7,7 @@
   "iris_search.pack_search.hint": "Vyhledávat balíčky shaderů...",
   "iris_search.pack_search.no_results": "Nebyl nalezen žádný balíček shaderů",
   "fml.menu.mods.info.description.iris_search": "Mod, který přidává vyhledávací lištu k modu Iris.",
-  "modmenu.descriptionTranslation.iris_search": "Mod, který přidává vyhledávací lištu k modu Iris."
+  "modmenu.descriptionTranslation.iris_search": "Mod, který přidává vyhledávací lištu k modu Iris.",
+  "iris_search.option_search.tip.menu": "§7Tip: §r§ejméno:§r hledání v nabídce - §evoda:§r pěna",
+  "iris_search.option_search.tip.changed": "§7Tip: §r§e*§r ukáže pouze změněná nastavení - §e*§rsvítící"
 }

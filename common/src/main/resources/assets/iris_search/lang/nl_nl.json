@@ -7,5 +7,7 @@
   "iris_search.pack_search.hint": "Shader Packs Zoeken...",
   "iris_search.pack_search.no_results": "Geen enkele Shader Pack komt met jouw zoekopdracht overeen",
   "fml.menu.mods.info.description.iris_search": "Een mod die een zoekbalk aan de Iris mod toevoegt.",
-  "modmenu.descriptionTranslation.iris_search": "Een mod die een zoekbalk aan de Iris mod toevoegt."
+  "modmenu.descriptionTranslation.iris_search": "Een mod die een zoekbalk aan de Iris mod toevoegt.",
+  "iris_search.option_search.tip.menu": "§7Tip: §r§enaam:§r zoek binnen een menu - §ewater:§r foam",
+  "iris_search.option_search.tip.changed": "§7Tip: §r§e*§r toon alleen gewijzigde instellingen - §e*§remissive"
 }

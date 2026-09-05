@@ -7,5 +7,7 @@
   "iris_search.pack_search.hint": "シェーダーパックを検索...",
   "iris_search.pack_search.no_results": "検索条件に一致するシェーダーパックは見つかりませんでした",
   "fml.menu.mods.info.description.iris_search": "Iris Modに検索バーを追加するMod。",
-  "modmenu.descriptionTranslation.iris_search": "Iris Modに検索バーを追加するMod。"
+  "modmenu.descriptionTranslation.iris_search": "Iris Modに検索バーを追加するMod。",
+  "iris_search.option_search.tip.menu": "§7ヒント: §r§e名前:§rでメニュー内を検索できます - §e水:§r 泡",
+  "iris_search.option_search.tip.changed": "§7ヒント: §r§e*§rで変更された設定のみを表示します - §e*§r光る"
 }
