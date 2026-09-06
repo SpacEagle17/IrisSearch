@@ -6,9 +6,9 @@ public final class SearchHints {
     private SearchHints() {}
 
     public static final List<String> ROTATING_TIP_KEYS = List.of(
-            "iris_search.option_search.tip.menu",
+            "iris_search.option_search.tip.jump",
             "iris_search.option_search.tip.changed",
-            "iris_search.option_search.tip.jump"
+            "iris_search.option_search.tip.menu"
     );
 
     public static final long ROTATE_INTERVAL_S = 3;
@@ -21,22 +21,25 @@ public final class SearchHints {
         return currentRotatingTipKey(System.currentTimeMillis());
     }
 
-    /** A  countdown {@code " §8(N)"} suffix until the tip swaps */
-    public static String countdownSuffix() {
-        return countdownSuffix(System.currentTimeMillis());
+    /** The current tip's position in the rotation, as a {@code " §8(i/n)"} suffix */
+    public static String positionSuffix() {
+        return positionSuffix(System.currentTimeMillis());
+    }
+
+    static int currentRotatingTipIndex(long nowMs) { // package-private for tests
+        if (ROTATING_TIP_KEYS.isEmpty()) {
+            return -1;
+        }
+        return (int) ((nowMs / (ROTATE_INTERVAL_S * 1000L)) % ROTATING_TIP_KEYS.size());
     }
 
     static String currentRotatingTipKey(long nowMs) { // package-private for tests
-        if (ROTATING_TIP_KEYS.isEmpty()) {
-            return null;
-        }
-        int index = (int) ((nowMs / (ROTATE_INTERVAL_S * 1000L)) % ROTATING_TIP_KEYS.size());
-        return ROTATING_TIP_KEYS.get(index);
+        int index = currentRotatingTipIndex(nowMs);
+        return index < 0 ? null : ROTATING_TIP_KEYS.get(index);
     }
 
-    static String countdownSuffix(long nowMs) { // package-private for tests
-        long periodSeconds = Math.max(1L, ROTATE_INTERVAL_S);
-        long secondsLeft = periodSeconds - (nowMs / 1000L) % periodSeconds;
-        return " §8(" + secondsLeft + ")";
+    static String positionSuffix(long nowMs) { // package-private for tests
+        int index = currentRotatingTipIndex(nowMs);
+        return index < 0 ? "" : " §8(" + (index + 1) + "/" + ROTATING_TIP_KEYS.size() + ")";
     }
 }

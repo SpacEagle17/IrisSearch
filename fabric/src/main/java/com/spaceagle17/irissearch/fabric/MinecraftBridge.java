@@ -418,8 +418,8 @@ public class MinecraftBridge {
             return null;
         }
         Object hint = createTranslatableComponent(key);
-        Object countdown = createLiteralComponent(SearchHints.countdownSuffix());
-        return (hint != null && countdown != null) ? appendComponent(hint, countdown) : hint;
+        Object position = createLiteralComponent(SearchHints.positionSuffix());
+        return (hint != null && position != null) ? appendComponent(hint, position) : hint;
     }
 
     /** Queues a hover/focus header button tooltip with optional rotating search syntax hints, failing silently on error. */

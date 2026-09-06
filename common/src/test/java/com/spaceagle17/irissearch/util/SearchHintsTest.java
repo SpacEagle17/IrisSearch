@@ -28,20 +28,20 @@ class SearchHintsTest {
     }
 
     @Test
-    void countdownTicksDownAcrossTheInterval() {
-        // Just switched: the whole period remains.
-        assertEquals(" §8(" + PERIOD_S + ")", SearchHints.countdownSuffix(0));
-        // One second in.
-        assertEquals(" §8(" + (PERIOD_S - 1) + ")", SearchHints.countdownSuffix(1000));
-        // Last second before the swap.
-        assertEquals(" §8(1)", SearchHints.countdownSuffix(INTERVAL_MS - 500));
-        // Wraps with the next slot.
-        assertEquals(" §8(" + PERIOD_S + ")", SearchHints.countdownSuffix(INTERVAL_MS));
+    void positionSuffixShowsCurrentTipOutOfTotal() {
+        for (int i = 0; i < COUNT * 2; i++) {
+            long now = i * INTERVAL_MS + 10; // 10ms into slot i
+            String expected = " §8(" + (i % COUNT + 1) + "/" + COUNT + ")";
+            assertEquals(expected, SearchHints.positionSuffix(now), "slot " + i);
+        }
+        // Holds for the whole interval, then advances.
+        assertEquals(" §8(1/" + COUNT + ")", SearchHints.positionSuffix(INTERVAL_MS - 1));
+        assertEquals(" §8(2/" + COUNT + ")", SearchHints.positionSuffix(INTERVAL_MS));
     }
 
     @Test
     void publicNoArgAccessorsReturnAValidKeyAndSuffix() {
         assertTrue(SearchHints.ROTATING_TIP_KEYS.contains(SearchHints.currentRotatingTipKey()));
-        assertTrue(SearchHints.countdownSuffix().matches(" §8\\(\\d+\\)"));
+        assertTrue(SearchHints.positionSuffix().matches(" §8\\(\\d+/" + COUNT + "\\)"));
     }
 }
