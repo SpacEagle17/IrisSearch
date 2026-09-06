@@ -9,5 +9,7 @@
   "iris_search.option_search.tip.menu": "§7Tipp: §r§eName:§r in einem Menü suchen - §eWasser:§r Schaum",
   "iris_search.option_search.tip.changed": "§7Tipp: §r§e*§r nur geänderte Optionen anzeigen - §e*§rSterne",
   "fml.menu.mods.info.description.iris_search": "Ein Mod, der dem Iris-Mod eine Suchleiste hinzufügt.",
-  "modmenu.descriptionTranslation.iris_search": "Ein Mod, der dem Iris-Mod eine Suchleiste hinzufügt."
+  "modmenu.descriptionTranslation.iris_search": "Ein Mod, der dem Iris-Mod eine Suchleiste hinzufügt.",
+  "iris_search.option_search.tip.jump": "§7Tipp: §r§eStrg+Klick§r auf ein Ergebnis springt ins Menü",
+  "iris_search.option_search.jump_hint": "Strg+Klick zum Öffnen"
 }

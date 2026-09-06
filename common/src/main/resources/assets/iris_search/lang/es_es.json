@@ -9,5 +9,7 @@
   "iris_search.option_search.tip.menu": "§7Consejo: §r§enombre:§r buscar dentro de un menú - §eagua:§r espuma",
   "iris_search.option_search.tip.changed": "§7Consejo: §r§e*§r mostrar solo opciones modificadas - §e*§restrellas",
   "fml.menu.mods.info.description.iris_search": "Un mod que añade una barra de búsqueda al mod Iris.",
-  "modmenu.descriptionTranslation.iris_search": "Un mod que añade una barra de búsqueda al mod Iris."
+  "modmenu.descriptionTranslation.iris_search": "Un mod que añade una barra de búsqueda al mod Iris.",
+  "iris_search.option_search.tip.jump": "§7Consejo: §r§eCtrl+Clic§r en un resultado para ir a su menú",
+  "iris_search.option_search.jump_hint": "Ctrl+Clic para abrir"
 }
