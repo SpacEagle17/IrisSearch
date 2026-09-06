@@ -248,6 +248,48 @@ public class MinecraftBridge {
         return null;
     }
 
+    /** Whether Ctrl is currently held, via {@code Screen.hasControlDown()} ({@code m_96637_} on Forge/1.20.1). */
+    public static boolean isControlDown() {
+        try {
+            Class<?> screenClass = resolveClass("net.minecraft.client.gui.screens.Screen", "net.minecraft.class_437");
+            if (screenClass != null) {
+                for (String name : new String[]{"m_96637_", "hasControlDown", "method_25441"}) {
+                    try {
+                        Method m = screenClass.getDeclaredMethod(name);
+                        m.setAccessible(true);
+                        Object result = m.invoke(null);
+                        if (result instanceof Boolean b) return b;
+                    } catch (NoSuchMethodException ignored) {
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            debugLog("isControlDown failed: " + t);
+        }
+        return false;
+    }
+
+    /** Whether Shift is currently held, via {@code Screen.hasShiftDown()} ({@code m_96638_} on Forge/1.20.1). */
+    public static boolean isShiftDown() {
+        try {
+            Class<?> screenClass = resolveClass("net.minecraft.client.gui.screens.Screen", "net.minecraft.class_437");
+            if (screenClass != null) {
+                for (String name : new String[]{"m_96638_", "hasShiftDown", "method_25442"}) {
+                    try {
+                        Method m = screenClass.getDeclaredMethod(name);
+                        m.setAccessible(true);
+                        Object result = m.invoke(null);
+                        if (result instanceof Boolean b) return b;
+                    } catch (NoSuchMethodException ignored) {
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            debugLog("isShiftDown failed: " + t);
+        }
+        return false;
+    }
+
     /**
      * Like Class.getMethod() but matches by assignability rather than exact type, so it
      * works when a parameter is declared as an interface but the argument is an implementing class.

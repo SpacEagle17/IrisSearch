@@ -36,4 +36,10 @@ public interface ISearchableOptionList {
     boolean irisSearch$isOnSubScreen();
     /** Atomically restores search state (flag + query + container filter) and triggers one rebuild. Used to preserve search across screen re-initializations. */
     void irisSearch$restoreSearchState(boolean active, String query, int cursor);
+
+    // Stores a search return (query + cursor) to be re-applied when the user presses the back button.
+    void irisSearch$armSearchReturn(String query, int cursor);
+    boolean irisSearch$isSearchReturnArmed();
+    void irisSearch$consumeSearchReturn();
+    void irisSearch$clearSearchReturn();
 }

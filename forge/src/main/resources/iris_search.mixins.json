@@ -5,7 +5,10 @@
   "plugin": "com.spaceagle17.irissearch.forge.mixin.IrisSearchMixinPlugin",
   "mixins": [
     "BaseOptionElementWidgetMixin",
-    "OptionMenuContainerMixin"
+    "ElementRowEntryMixin",
+    "NavigationControllerMixin",
+    "OptionMenuContainerMixin",
+    "SliderElementWidgetMixin"
   ],
   "client": [
     "IrisElementRowMixin",

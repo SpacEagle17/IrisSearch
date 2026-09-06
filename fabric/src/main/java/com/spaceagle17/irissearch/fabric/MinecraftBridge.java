@@ -329,29 +329,59 @@ public class MinecraftBridge {
     }
 
     public static boolean isControlDown() {
+        return modifierHeld(
+                new String[]{"hasControlDown", "method_25441", "m_96637_"}, // Screen.hasControlDown() static, MC <= 1.21.5
+                new String[]{"hasControlDown", "method_74188"});            // Minecraft#hasControlDown(), Newer MC
+    }
+
+    public static boolean isShiftDown() {
+        return modifierHeld(
+                new String[]{"hasShiftDown", "method_25442", "m_96638_"},
+                new String[]{"hasShiftDown", "method_74189"});
+    }
+
+    /**
+     * A modifier-key check that spans versions: {@code Screen.hasXDown()} was a static method through
+     * MC 1.21.5, then moved to an instance method on {@code Minecraft} in 1.21.9 I think???
+     */
+    private static boolean modifierHeld(String[] screenStaticNames, String[] minecraftInstanceNames) {
         try {
-            Object mc = getMinecraftClientInstance();
-            if (mc == null) {
-                return false;
-            }
-            for (String name : new String[]{"hasControlDown", "method_74188"}) {
-                try {
-                    Method m = findMethodDeep(mc.getClass(), name);
-                    if (m != null) {
-                        Object result = m.invoke(mc);
+            Class<?> screenClass = resolveClass("net.minecraft.client.gui.screens.Screen", "net.minecraft.class_437");
+            if (screenClass != null) {
+                for (String name : screenStaticNames) {
+                    try {
+                        Method m = screenClass.getDeclaredMethod(name);
+                        m.setAccessible(true);
+                        Object result = m.invoke(null);
                         if (result instanceof Boolean) {
                             return (Boolean) result;
                         }
+                    } catch (NoSuchMethodException ignored) {
                     }
-                } catch (Throwable ignored) {
                 }
             }
-            return false;
-        } catch (Throwable t) {
-            IrisSearch.log(3, "Couldn't check whether Ctrl is held." + t);
-            debugLog("isControlDown failed: " + t);
-            return false;
+        } catch (Throwable ignored) {
         }
+        try {
+            Object mc = getMinecraftClientInstance();
+            if (mc != null) {
+                for (String name : minecraftInstanceNames) {
+                    try {
+                        Method m = findMethodDeep(mc.getClass(), name);
+                        if (m != null) {
+                            Object result = m.invoke(mc);
+                            if (result instanceof Boolean) {
+                                return (Boolean) result;
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            debugLog("modifierHeld failed: " + t);
+        }
+        return false;
     }
 
     /**

@@ -4,7 +4,10 @@
   "plugin": "com.spaceagle17.irissearch.neoforge.mixin.IrisSearchMixinPlugin",
   "mixins": [
     "BaseOptionElementWidgetMixin",
-    "OptionMenuContainerMixin"
+    "ElementRowEntryMixin",
+    "NavigationControllerMixin",
+    "OptionMenuContainerMixin",
+    "SliderElementWidgetMixin"
   ],
   "client": [
     "ScreenAccessor",

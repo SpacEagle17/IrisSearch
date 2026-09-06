@@ -172,4 +172,38 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
             debugLog("Failed to rebuild after restoring search state: " + e);
         }
     }
+
+    // After a Ctrl+Click jump, the first back returns the search again with the same query as before
+
+    @Unique private boolean irisSearch$searchReturnArmed = false;
+    @Unique private String irisSearch$searchReturnQuery = "";
+    @Unique private int irisSearch$searchReturnCursor = 0;
+
+    @Override
+    public void irisSearch$armSearchReturn(String query, int cursor) {
+        this.irisSearch$searchReturnQuery = query != null ? query : "";
+        this.irisSearch$searchReturnCursor = Math.max(0, cursor);
+        this.irisSearch$searchReturnArmed = !this.irisSearch$searchReturnQuery.isEmpty();
+    }
+
+    @Override
+    public boolean irisSearch$isSearchReturnArmed() {
+        return this.irisSearch$searchReturnArmed;
+    }
+
+    @Override
+    public void irisSearch$consumeSearchReturn() {
+        if (!this.irisSearch$searchReturnArmed) return;
+        String query = this.irisSearch$searchReturnQuery;
+        int cursor = this.irisSearch$searchReturnCursor;
+        irisSearch$clearSearchReturn();
+        irisSearch$restoreSearchState(true, query, cursor);
+    }
+
+    @Override
+    public void irisSearch$clearSearchReturn() {
+        this.irisSearch$searchReturnArmed = false;
+        this.irisSearch$searchReturnQuery = "";
+        this.irisSearch$searchReturnCursor = 0;
+    }
 }

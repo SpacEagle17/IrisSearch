@@ -7,7 +7,8 @@ public final class SearchHints {
 
     public static final List<String> ROTATING_TIP_KEYS = List.of(
             "iris_search.option_search.tip.menu",
-            "iris_search.option_search.tip.changed"
+            "iris_search.option_search.tip.changed",
+            "iris_search.option_search.tip.jump"
     );
 
     public static final long ROTATE_INTERVAL_S = 3;

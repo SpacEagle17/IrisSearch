@@ -4,8 +4,11 @@
   "plugin": "com.spaceagle17.irissearch.fabric.mixin.IrisSearchMixinPlugin",
   "mixins": [
     "BaseOptionElementWidgetMixin",
+    "ElementRowEntryMixin",
     "IrisElementRowMixin",
-    "OptionMenuContainerMixin"
+    "NavigationControllerMixin",
+    "OptionMenuContainerMixin",
+    "SliderElementWidgetMixin"
   ],
   "client": [
     "ScreenAccessor",
