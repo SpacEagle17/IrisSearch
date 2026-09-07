@@ -7,5 +7,9 @@
   "iris_search.pack_search.hint": "Pesquisar Pacote de Shaders...",
   "iris_search.pack_search.no_results": "Nenhum pacote de shaders corresponde à sua pesquisa",
   "fml.menu.mods.info.description.iris_search": "Um mod que adiciona uma barra de busca ao Iris.",
-  "modmenu.descriptionTranslation.iris_search": "Um mod que adiciona uma barra de busca ao Iris."
+  "modmenu.descriptionTranslation.iris_search": "Um mod que adiciona uma barra de busca ao Iris.",
+  "iris_search.option_search.tip.menu": "Dica: Pesquise por dentro de um menu - Mar: Espuma",
+  "iris_search.option_search.tip.changed": "Dica: Mostra so as opções mudadas - remissivos",
+  "iris_search.option_search.tip.jump": "Dica: Ctrl+Click um resultado para pular a esse menu",
+  "iris_search.option_search.jump_hint": "Ctrl+Click para abrir"
 }
