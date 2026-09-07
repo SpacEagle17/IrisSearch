@@ -8,8 +8,8 @@
   "iris_search.pack_search.no_results": "Nenhum pacote de shaders corresponde à sua pesquisa",
   "fml.menu.mods.info.description.iris_search": "Um mod que adiciona uma barra de busca ao Iris.",
   "modmenu.descriptionTranslation.iris_search": "Um mod que adiciona uma barra de busca ao Iris.",
-  "iris_search.option_search.tip.menu": "Dica: Pesquise por dentro de um menu - Mar: Espuma",
-  "iris_search.option_search.tip.changed": "Dica: Mostra so as opções mudadas - remissivos",
-  "iris_search.option_search.tip.jump": "Dica: Ctrl+Click um resultado para pular a esse menu",
+  "iris_search.option_search.tip.menu": "§7Dica: §r§enome:§r pesquisa dentro de um menu - §eágua:§r espuma",
+  "iris_search.option_search.tip.changed": "§7Dica: §r§e*§r mostra apenas opções mudadas - §e*§remissivo",
+  "iris_search.option_search.tip.jump": "§7Dica: §r§eCtrl+Click§r um resultado para pular a esse menu",
   "iris_search.option_search.jump_hint": "Ctrl+Click para abrir"
 }
