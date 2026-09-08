@@ -9,5 +9,7 @@
   "fml.menu.mods.info.description.iris_search": "Iris Modに検索バーを追加するMod。",
   "modmenu.descriptionTranslation.iris_search": "Iris Modに検索バーを追加するMod。",
   "iris_search.option_search.tip.menu": "§7ヒント: §r§e名前:§rでメニュー内を検索できます - §e水:§r 泡",
-  "iris_search.option_search.tip.changed": "§7ヒント: §r§e*§rで変更された設定のみを表示します - §e*§r光る"
+  "iris_search.option_search.tip.changed": "§7ヒント: §r§e*§rで変更された設定のみを表示します - §e*§r光る",
+  "iris_search.option_search.tip.jump": "§7ヒント: §r検索結果を§eCtrl+クリック§rでその設定のメニューが開きます",
+  "iris_search.option_search.jump_hint": "Ctrl+クリックでメニューを開く"
 }

@@ -7,5 +7,9 @@
   "iris_search.pack_search.hint": "Shader Paketlerini Ara...",
   "iris_search.pack_search.no_results": "Aramaya uyan bir shader paketi yok",
   "fml.menu.mods.info.description.iris_search": "Iris modu için arama kutusu ekleyen bir mod.",
-  "modmenu.descriptionTranslation.iris_search": "Iris modu için arama kutusu ekleyen bir mod."
+  "modmenu.descriptionTranslation.iris_search": "Iris modu için arama kutusu ekleyen bir mod.",
+  "iris_search.option_search.tip.menu": "§7Öneri: §r§eisim:§r bir menü içinde arar - §ewater:§r foam",
+  "iris_search.option_search.tip.changed": "§7Öneri: §r§e*§r sadece değişmiş ayarları gösterir - §e*§remissive",
+  "iris_search.option_search.tip.jump": "§7Öneri: §rBir sonucun menüsüne gitmek için §eCtrl+Tıkla§r",
+  "iris_search.option_search.jump_hint": "Menüyü açmak için Ctrl+Tıkla"
 }

@@ -11,5 +11,5 @@
   "fml.menu.mods.info.description.iris_search": "Ein Mod, der dem Iris-Mod eine Suchleiste hinzufügt.",
   "modmenu.descriptionTranslation.iris_search": "Ein Mod, der dem Iris-Mod eine Suchleiste hinzufügt.",
   "iris_search.option_search.tip.jump": "§7Tipp: §r§eStrg+Klick§r auf ein Ergebnis springt ins Menü",
-  "iris_search.option_search.jump_hint": "Strg+Klick zum Öffnen"
+  "iris_search.option_search.jump_hint": "Strg+Klick um das Menü zu öffnen"
 }
