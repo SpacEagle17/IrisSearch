@@ -7,5 +7,9 @@
   "iris_search.pack_search.hint": "搜索光影包……",
   "iris_search.pack_search.no_results": "没有光影包符合你的搜索",
   "fml.menu.mods.info.description.iris_search": "一个为Iris模组添加搜索栏的模组。",
-  "modmenu.descriptionTranslation.iris_search": "一个为Iris模组添加搜索栏的模组。"
+  "modmenu.descriptionTranslation.iris_search": "一个为Iris模组添加搜索栏的模组。",
+  "iris_search.option_search.tip.menu": "§7提示: §r§e名称:§r 在菜单中搜索 - §e水:§r 泡沫",
+  "iris_search.option_search.tip.changed": "§7提示: §r§e*§r 只显示已改动的选项 - §e*§r发光",
+  "iris_search.option_search.tip.jump": "§7Tip: §r§eCtrl+Click§r 搜索结果以跳转至其菜单",
+  "iris_search.option_search.jump_hint": "Ctrl+Click 开启菜单"
 }
