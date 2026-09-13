@@ -11,7 +11,6 @@ import com.spaceagle17.irissearch.util.PreservedSearchState;
 import net.irisshaders.iris.gui.GuiUtil;
 import net.irisshaders.iris.gui.element.ShaderPackOptionList;
 import net.irisshaders.iris.gui.element.ShaderPackSelectionList;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -618,9 +617,9 @@ public class ShaderPackScreenMixin {
 
             Object keyObj = ReflectionUtils.invokeMethod(event, "key", new Class<?>[]{});
             int key = keyObj instanceof Integer ? (Integer) keyObj : -1;
-            boolean isEscape = key == GLFW.GLFW_KEY_ESCAPE;
+            boolean isEscape = MinecraftBridge.isEscapeDown(key);
             boolean ctrlDown = MinecraftBridge.isControlDown();
-            debugLog("keyPressed: key=" + key + " isEscape=" + isEscape + " ctrlDown=" + ctrlDown);
+            debugLog("keyPressed: key=" + key + " isEscape=" + isEscape + " ctrlDown=" + ctrlDown + " isShiftDown=" + MinecraftBridge.isShiftDown());
 
             if (irisSearch$handleSearchKeyPress(key, ctrlDown, isEscape)) {
                 cir.setReturnValue(true);
@@ -661,7 +660,7 @@ public class ShaderPackScreenMixin {
                 return true;
             }
 
-            if (ctrlDown && key == GLFW.GLFW_KEY_F) {
+            if (ctrlDown && MinecraftBridge.isFDown(key)) {
                 GuiUtil.playButtonClickSound();
                 if (isFocused) {
                     irisSearch$unfocusSearchBox(this.irisSearch$packSearchBox);
@@ -695,7 +694,7 @@ public class ShaderPackScreenMixin {
                 return true;
             }
 
-            if (ctrlDown && key == GLFW.GLFW_KEY_F && this.optionMenuOpen && !searchable.irisSearch$isOnSubScreen()) {
+            if (ctrlDown && MinecraftBridge.isFDown(key) && this.optionMenuOpen && !searchable.irisSearch$isOnSubScreen()) {
                 GuiUtil.playButtonClickSound();
 
                 if (!searchable.irisSearch$isSearchModeActive()) {

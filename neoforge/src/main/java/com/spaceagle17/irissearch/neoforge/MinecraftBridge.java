@@ -4,6 +4,7 @@ import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.util.SearchHints;
+import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -15,6 +16,9 @@ import java.util.List;
  * reflection, with no compile-time dependency on any net.minecraft.* class.
  */
 public class MinecraftBridge {
+
+    private static Integer keyCodeF;
+    private static Integer keyCodeEscape;
 
     private MinecraftBridge() {
     }
@@ -382,6 +386,30 @@ public class MinecraftBridge {
             debugLog("modifierHeld failed: " + t);
         }
         return false;
+    }
+
+    public static boolean isFDown(int key) {
+        if (keyCodeF == null) keyCodeF = resolveInputConstant("KEY_F", GLFW.GLFW_KEY_F);
+        return key == keyCodeF;
+    }
+
+    public static boolean isEscapeDown(int key) {
+        if (keyCodeEscape == null) keyCodeEscape = resolveInputConstant("KEY_ESCAPE", GLFW.GLFW_KEY_ESCAPE);
+        return key == keyCodeEscape;
+    }
+
+    // Read directly from what Mojang uses because of the SDL3 change
+    private static int resolveInputConstant(String fieldName, int fallback) {
+        try {
+            Class<?> inputConstants = resolveClass("com.mojang.blaze3d.platform.InputConstants");
+            if (inputConstants != null) {
+                Object value = inputConstants.getField(fieldName).get(null);
+                if (value instanceof Integer i) return i;
+            }
+        } catch (Throwable t) {
+            debugLog("resolveInputConstant(" + fieldName + ") failed: " + t);
+        }
+        return fallback;
     }
 
     /**
