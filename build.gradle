@@ -23,10 +23,24 @@ ext.publishConfirmed = false
 ext.skipCurseforge = false
 ext.skipModrinth = false
 
+// Soft requirement, if CHANGELOG.md is missing, create it with placeholder
+ext.ensureChangelogFile = {
+    if (!changelogFile.exists()) {
+        def modVersion = versionProps.getProperty('mod_version')
+        changelogFile.text = "### Iris Search ${modVersion}\n" +
+                "\n" +
+                "## Changes:\n" +
+                "- ...\n"
+    }
+    changelogFile
+}
+ext.readChangelog = { -> ensureChangelogFile().text }
+
 allprojects {
     group = 'com.spaceagle17'
 	ext.versionProps = versionProps
 	ext.changelogFile = rootProject.ext.changelogFile
+	ext.readChangelog = rootProject.ext.readChangelog
 	ext.publishTestRun = rootProject.ext.publishTestRun
 }
 
@@ -35,12 +49,13 @@ tasks.register('validateChangelog') {
     outputs.upToDateWhen {false}
     doLast {
         def baseVersion = versionProps.getProperty('mod_version')
+        def alreadyExisted = changelogFile.exists()
 
-        if (!changelogFile.exists()) {
+        def changelogContent = readChangelog()
+
+        if (!alreadyExisted) {
             throw new GradleException("CHANGELOG.md was missing and has been created. Please update it with release notes and try again.")
         }
-
-        def changelogContent = changelogFile.text
 
         if (!changelogContent.contains(baseVersion)) {
             throw new GradleException("CHANGELOG.md does not contain version ${baseVersion}. Please update the changelog before publishing.")
