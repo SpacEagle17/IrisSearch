@@ -176,10 +176,10 @@ class ShaderOptionsSearchEngineTest {
         }
 
         @Test
-        @DisplayName("A typo'd dictionary key still resolves through fuzzy synonym matching")
-        void typoedDictionaryKeyFuzzyMatches() {
+        @DisplayName("A typo'd dictionary key does not resolve through the synonym dictionary")
+        void typoedDictionaryKeyDoesNotMatch() {
             configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
-            assertTrue(matches("OPT_LIGHTSHAFT", "godrasy", null), "a typo of \"godrays\" should still fuzzy-match the dictionary key");
+            assertFalse(matches("OPT_LIGHTSHAFT", "godrasy", null), "typo-derived synonym expansion is intentionally disabled");
         }
 
         @Test
@@ -188,6 +188,13 @@ class ShaderOptionsSearchEngineTest {
             configureOption("OPT_LIGHTSHAFT", "Light Shafts", null, null, null);
             assertFalse(matches("OPT_LIGHTSHAFT", "go", null), "too short to trigger fuzzy dictionary matching");
             assertFalse(matches("BLOOM_STRENGTH", "godray", null), "fuzzy synonym match shouldn't leak into unrelated options");
+        }
+
+        @Test
+        @DisplayName("Regression: \"cave\" (one edit from the \"wave\" key) must not surface Waving Grass")
+        void typoOfSynonymKeyDoesNotSurfaceUnrelatedGroup() {
+            configureOption("WAVING_FOLIAGE", "Waving Grass", "Waving Grass", null, null);
+            assertFalse(matches("WAVING_FOLIAGE", "cave", null));
         }
 
         @Test

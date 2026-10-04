@@ -217,22 +217,23 @@ public class ShaderOptionsSearchEngine {
     }
 
     /**
-     * Resolves synonyms for a query token via exact or fuzzy key matching.
-     * Allows partial words (e.g., "godray" for "godrays") and typos to expand to synonym groups.
+     * Resolves synonyms for a query via exact or prefix key matching.
+     * Allows partial words (e.g., "godray" for "godrays") to expand to synonym groups.
+     * Typos of a dictionary key are deliberately not expanded, was bad UX
      */
     private static Set<String> resolveSynonyms(String token) {
         Set<String> exact = SearchDictionaries.getSynonyms(token);
         if (!exact.isEmpty() || token.length() < MIN_FUZZY_SYNONYM_KEY_LENGTH) return exact;
 
-        Set<String> fuzzy = new HashSet<>();
+        Set<String> prefix = new HashSet<>();
         for (String key : SearchDictionaries.getSynonymKeys()) {
             if (key.indexOf(' ') >= 0 || key.equals(token)) continue; // multi-word keys can't match a single token here
-            if (key.startsWith(token) || isTypoMatch(token, key)) {
-                fuzzy.add(key);
-                fuzzy.addAll(SearchDictionaries.getSynonyms(key));
+            if (key.startsWith(token)) {
+                prefix.add(key);
+                prefix.addAll(SearchDictionaries.getSynonyms(key));
             }
         }
-        return fuzzy;
+        return prefix;
     }
 
     private static int scanQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
