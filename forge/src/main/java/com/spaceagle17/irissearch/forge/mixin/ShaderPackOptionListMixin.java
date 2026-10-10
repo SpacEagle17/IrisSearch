@@ -4,6 +4,7 @@ import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.forge.ISearchableOptionContainer;
 import com.spaceagle17.irissearch.forge.ISearchableOptionList;
+import com.spaceagle17.irissearch.forge.MinecraftBridge;
 import net.irisshaders.iris.gui.NavigationController;
 import net.irisshaders.iris.gui.element.ShaderPackOptionList;
 import net.irisshaders.iris.gui.screen.ShaderPackScreen;
@@ -102,11 +103,17 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
     @Override public int irisSearch$getReservedLeftWidth() { return this.irisSearch$reservedLeftWidth; }
     @Override public void irisSearch$setReservedLeftWidth(int width) { this.irisSearch$reservedLeftWidth = Math.max(0, width); }
 
+    @Unique
+    private void irisSearch$saveListHeight() {
+        ((ISearchableOptionContainer) this.container).irisSearch$setVisibleListHeight(MinecraftBridge.getListVisibleHeight(this, -1));
+    }
+
     @Override
     public void irisSearch$updateSearchQuery(String query) {
         try {
             this.irisSearch$typedSearchQuery = query != null ? query : "";
             if (this.container != null) {
+                irisSearch$saveListHeight();
                 ((ISearchableOptionContainer) this.container).irisSearch$setSearchQuery(query);
             }
             this.rebuild();
@@ -160,6 +167,7 @@ public abstract class ShaderPackOptionListMixin implements ISearchableOptionList
         this.irisSearch$savedCursorPosition = Math.max(0, cursor);
         if (active && this.container != null) {
             try {
+                irisSearch$saveListHeight();
                 ((ISearchableOptionContainer) this.container).irisSearch$setSearchQuery(this.irisSearch$typedSearchQuery);
             } catch (Exception e) {
                 irisSearch$debugLog("Failed to apply restored query to container: " + e);

@@ -57,6 +57,29 @@ public class ReflectionUtils {
     }
 
     /**
+     * Returns the first field found under any of the given names, checking the class and then its superclasses.
+     * Useful when the same field has different names depending on mapping state (named vs. intermediary vs. SRG).
+     *
+     * @param declaringClass the class to start searching from
+     * @param fieldNames     candidate field names, in priority order
+     * @return the first resolvable field, already made accessible
+     * @throws NoSuchFieldException if none of the candidates resolve
+     */
+    public static Field tryFields(Class<?> declaringClass, String... fieldNames) throws NoSuchFieldException {
+        for (Class<?> clazz = declaringClass; clazz != null; clazz = clazz.getSuperclass()) {
+            for (String fieldName : fieldNames) {
+                try {
+                    Field field = clazz.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    return field;
+                } catch (NoSuchFieldException ignored) {
+                }
+            }
+        }
+        throw new NoSuchFieldException(declaringClass.getName() + ": none of " + String.join(", ", fieldNames));
+    }
+
+    /**
      * Sets the value of a field in an object by its name.
      * @param target The object containing the field.
      * @param fieldName The name of the field.

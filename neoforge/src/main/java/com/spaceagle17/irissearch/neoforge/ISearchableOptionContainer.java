@@ -12,4 +12,9 @@ public interface ISearchableOptionContainer {
      * "root/LIGHTING/SHADOWS"). Built once after the container is constructed.
      */
     String irisSearch$getOptionPath(String optionId);
+
+    /**
+     * Reports how tall in px the option list is
+     */
+    void irisSearch$setVisibleListHeight(int height);
 }

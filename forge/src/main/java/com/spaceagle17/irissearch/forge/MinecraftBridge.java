@@ -6,6 +6,7 @@ import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.util.SearchHints;
 import net.minecraft.client.Minecraft;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -246,6 +247,21 @@ public class MinecraftBridge {
             }
         }
         return null;
+    }
+
+    /** Visible height in GUI px of a selection list. MC 1.20.1 lists have no getHeight(), so this is {@code y1 - y0}. */
+    public static int getListVisibleHeight(Object list, int fallback) {
+        if (list == null) {
+            return fallback;
+        }
+        try {
+            Field top = ReflectionUtils.tryFields(list.getClass(), "y0", "f_93390_");
+            Field bottom = ReflectionUtils.tryFields(list.getClass(), "y1", "f_93391_");
+            return bottom.getInt(list) - top.getInt(list);
+        } catch (ReflectiveOperationException e) {
+            debugLog("getListVisibleHeight: y0/y1 not found on " + list.getClass().getName());
+            return fallback;
+        }
     }
 
     /** Whether Ctrl is currently held, via {@code Screen.hasControlDown()} ({@code m_96637_} on Forge/1.20.1). */

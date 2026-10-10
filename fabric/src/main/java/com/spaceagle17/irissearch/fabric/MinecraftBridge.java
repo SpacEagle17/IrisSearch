@@ -7,6 +7,7 @@ import com.spaceagle17.irissearch.util.SearchHints;
 import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -330,6 +331,33 @@ public class MinecraftBridge {
             }
         }
         return null;
+    }
+
+    /**
+     * Visible height in GUI px of a selection list: {@code getHeight()} on MC 1.20.3+ (lists are widgets there),
+     * {@code y1 - y0} on older versions.
+     */
+    public static int getListVisibleHeight(Object list, int fallback) {
+        if (list == null) {
+            return fallback;
+        }
+        for (String name : new String[]{"getHeight", "method_25364"}) {
+            Method m = findMethodDeep(list.getClass(), name);
+            if (m != null) {
+                try {
+                    if (m.invoke(list) instanceof Integer height) return height;
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+        try {
+            Field top = ReflectionUtils.tryFields(list.getClass(), "y0", "field_19085");
+            Field bottom = ReflectionUtils.tryFields(list.getClass(), "y1", "field_19086");
+            return bottom.getInt(list) - top.getInt(list);
+        } catch (ReflectiveOperationException e) {
+            debugLog("getListVisibleHeight: neither getHeight() nor y0/y1 found on " + list.getClass().getName());
+            return fallback;
+        }
     }
 
     public static boolean isControlDown() {

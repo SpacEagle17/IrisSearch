@@ -2,6 +2,7 @@ package com.spaceagle17.irissearch.forge.mixin;
 
 import com.spaceagle17.irissearch.IrisSearch;
 import com.spaceagle17.irissearch.ReflectionUtils;
+import com.spaceagle17.irissearch.config.ConfigHandler;
 import com.spaceagle17.irissearch.engine.ShaderOptionsSearchEngine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import com.spaceagle17.irissearch.forge.ISearchableOptionContainer;
@@ -36,6 +37,12 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
     @Unique
     private final List<OptionMenuElement> irisSearch$originalMainElements = new ArrayList<>();
 
+    @Unique
+    private Object irisSearch$originalColumnCount;
+
+    @Unique
+    private int irisSearch$visibleListHeight = -1;
+
     @Unique private final Map<String, String> irisSearch$cachedOptionPaths = new HashMap<>();
 
     @Unique
@@ -53,6 +60,7 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
         try {
             irisSearch$originalMainElements.clear();
             irisSearch$originalMainElements.addAll(this.mainScreen.elements);
+            irisSearch$originalColumnCount = ReflectionUtils.getFieldValue(this.mainScreen, "columnCount");
 
             // 1. Walk the GUI tree top-down and map all full paths
             irisSearch$generateAllPaths();
@@ -101,6 +109,11 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
                 }
             }
         }
+    }
+
+    @Override
+    public void irisSearch$setVisibleListHeight(int height) {
+        this.irisSearch$visibleListHeight = height;
     }
 
     @Override
@@ -207,11 +220,36 @@ public class OptionMenuContainerMixin implements ISearchableOptionContainer {
             OptionMenuOptionElement el = elementById.get(scored.optionId());
             if (el != null) this.mainScreen.elements.add(el);
         }
+        // Force 1 column if under the limit so it looks better with fewer results
+        if (this.mainScreen.elements.size() <= irisSearch$singleColumnLimit()) {
+            ReflectionUtils.setFieldValue(this.mainScreen, "columnCount", Optional.of(1));
+        } else {
+            irisSearch$restoreColumnCount();
+        }
+    }
+
+    // Option rows that fit the list without scrolling. Rows are 24 px
+    @Unique
+    private int irisSearch$singleColumnLimit() {
+        int configured = ConfigHandler.maxResultsForSingleColumn;
+        if (configured >= 0) return configured;
+        if (irisSearch$visibleListHeight < 0) return 4;
+        int limit = Math.max(0, irisSearch$visibleListHeight / 24 - 1);
+        irisSearch$debugLog("Computed single-column limit: " + limit + " (visible list height = " + irisSearch$visibleListHeight + ")");
+        return limit;
+    }
+
+    @Unique
+    private void irisSearch$restoreColumnCount() {
+        if (irisSearch$originalColumnCount != null) {
+            ReflectionUtils.setFieldValue(this.mainScreen, "columnCount", irisSearch$originalColumnCount);
+        }
     }
 
     @Unique
     private void irisSearch$restoreOriginalLayout() {
         this.mainScreen.elements.clear();
         this.mainScreen.elements.addAll(irisSearch$originalMainElements);
+        irisSearch$restoreColumnCount();
     }
 }

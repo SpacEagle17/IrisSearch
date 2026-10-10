@@ -332,6 +332,21 @@ public class MinecraftBridge {
         return null;
     }
 
+    public static int getListVisibleHeight(Object list, int fallback) {
+        if (list == null) {
+            return fallback;
+        }
+        Method m = findMethodDeep(list.getClass(), "getHeight");
+        if (m != null) {
+            try {
+                if (m.invoke(list) instanceof Integer height) return height;
+            } catch (Throwable ignored) {
+            }
+        }
+        debugLog("getListVisibleHeight: getHeight() not found on " + list.getClass().getName());
+        return fallback;
+    }
+
     public static boolean isControlDown() {
         return modifierHeld(
                 new String[]{"hasControlDown", "method_25441", "m_96637_"}, // Screen.hasControlDown() static, MC <= 1.21.5

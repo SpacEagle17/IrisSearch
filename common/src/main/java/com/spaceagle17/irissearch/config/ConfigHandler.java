@@ -9,6 +9,7 @@ public class ConfigHandler {
     // Config Options
     public static boolean doDebugLogging = false;
     public static int minPacksForSelectionSearch = 6;
+    public static int maxResultsForSingleColumn = -1;
 
     public static void configStuff() {
         Config.initialize();
@@ -34,6 +35,12 @@ public class ConfigHandler {
         minPacksForSelectionSearch = Config.readWriteConfig("behavior", "minPacksForSelectionSearch",6,
                 "Minimum number of shader packs required for the search bar to appear in the shader selection menu." +
                         "\nDefault = 6");
+
+        maxResultsForSingleColumn = Math.max(-1, Config.readWriteConfig("behavior", "maxResultsForSingleColumn", -1,
+                "Maximum number of option search results that are shown in a single column instead of the usual two or three." +
+                        "\nSet to -1 to pick automatically: a single column is used based on GUI scale and screen size." +
+                        "\nSet to 0 to never use a single column." +
+                        "\nDefault = -1"));
 
         // Type is auto-detected from the default value - no casting needed!
         boolean configDebugLogging = Config.readWriteConfig("debug", "doDebugLogging", false,
