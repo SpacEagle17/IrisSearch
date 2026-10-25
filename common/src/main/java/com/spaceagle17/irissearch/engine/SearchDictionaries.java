@@ -53,7 +53,7 @@ public final class SearchDictionaries {
         Set.of("sspt", "screen space path tracing"),
         Set.of("pom", "parallax occlusion mapping", "parallax"),
         Set.of("tessellation", "tess", "displacement mapping", "displacement"),
-        Set.of("sss", "subsurface scattering", "sub surface scattering"),
+        Set.of("sss", "subsurface scattering", "sub surface scattering", "subsurface scatter"),
         Set.of("pbr", "physically based rendering"),
         Set.of("csm", "cascaded shadow maps", "cascaded shadow mapping", "cascade shadows"),
         Set.of("pcss", "percentage closer soft shadows", "percentage-closer soft shadows"),
