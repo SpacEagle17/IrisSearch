@@ -34,6 +34,11 @@ public final class IrisShaderPackTranslations {
     private static Field irisLanguageCodesField = null;
     private static Object cachedIrisPackRef = null;
 
+    private static final List<String> FALLBACK_LANGUAGE_CODES = List.of("en_us");
+    private static List<?> languageCodesRawSnapshot = null;
+    private static List<String> languageCodesSnapshot = FALLBACK_LANGUAGE_CODES;
+    private static int stateVersion = 0; // see stateVersion()
+
     // Per-language-code sorted translation snapshots for value.<optionId>.<suffix> prefix scans
     // keyed by language code (e.g. "en_us", "pl_pl"). Cleared whenever cachedIrisPackRef changes.
     private static final Map<String, NavigableMap<String, String>> irisValueTranslationsByCode = new ConcurrentHashMap<>();
@@ -82,14 +87,36 @@ public final class IrisShaderPackTranslations {
      * <code>value.optionId.suffix</code>
      */
     public static boolean matchesOptionValueTranslation(String optionId, String trimmedQuery) {
+        for (String text : getOptionValueTexts(optionId)) {
+            if (text.contains(trimmedQuery)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Every searchable value translation ({@code value.<optionId>.<suffix>}) of an option across the active
+     * languages: color-stripped, lowercased, with blank and purely numeric values dropped.
+     */
+    static String[] getOptionValueTexts(String optionId) {
         String prefix = "value." + optionId + ".";
         refreshIrisPackIfNeeded();
 
+        List<String> texts = new ArrayList<>();
         for (String code : getActiveIrisLanguageCodes()) {
             NavigableMap<String, String> map = getIrisValueTranslationsForCode(code);
-            if (!map.isEmpty() && matchesPrefixRange(map, prefix, trimmedQuery)) return true;
+            if (!map.isEmpty()) collectPrefixRange(map, prefix, texts);
         }
-        return false;
+        return texts.toArray(new String[0]);
+    }
+
+    /**
+     * Changes whenever something this class feeds into the search results changes: the loaded shader pack or
+     * the active language codes. Lets callers cache derived data and drop it when the version moves on.
+     */
+    static int stateVersion() {
+        refreshIrisPackIfNeeded();
+        getActiveIrisLanguageCodes(); // bumps stateVersion if the codes changed
+        return stateVersion;
     }
 
     /**
@@ -107,9 +134,11 @@ public final class IrisShaderPackTranslations {
 
             cachedIrisPackRef = pack;
             irisValueTranslationsByCode.clear();
+            stateVersion++;
         } catch (Throwable t) {
             cachedIrisPackRef = null;
             irisValueTranslationsByCode.clear();
+            stateVersion++;
         }
     }
 
@@ -118,7 +147,7 @@ public final class IrisShaderPackTranslations {
      *  Falls back to {@code List.of("en_us")} if the field is not present or cannot be read.
      */
     private static List<String> getActiveIrisLanguageCodes() {
-        List<String> fallback = List.of("en_us");
+        List<String> fallback = FALLBACK_LANGUAGE_CODES;
         Object languageInstance = MinecraftLanguageAccess.getLanguageInstance();
         if (irisLanguageCodesFieldLookupFailed || languageInstance == null) return fallback;
 
@@ -135,11 +164,19 @@ public final class IrisShaderPackTranslations {
 
             Object value = irisLanguageCodesField.get(null);
             if (value instanceof List<?> rawList && !rawList.isEmpty()) {
+                // Runs for every option scored, so hand back the previous result while the list is unchanged.
+                if (rawList.equals(languageCodesRawSnapshot)) return languageCodesSnapshot;
+
                 List<String> codes = new ArrayList<>();
                 for (Object o : rawList) {
                     if (o instanceof String s) codes.add(s);
                 }
-                if (!codes.isEmpty()) return codes;
+                if (!codes.isEmpty()) {
+                    languageCodesRawSnapshot = new ArrayList<>(rawList); // copy, in case Iris mutates its list in place
+                    languageCodesSnapshot = codes;
+                    stateVersion++;
+                    return codes;
+                }
             }
         } catch (Throwable t) {
             irisLanguageCodesFieldLookupFailed = true;
@@ -174,9 +211,10 @@ public final class IrisShaderPackTranslations {
     }
 
     /**
-     * Checks if any entries in the sorted map with keys starting with the given prefix contain the trimmed query.
+     * Appends the searchable (color-stripped, lowercased, non-numeric) values of every entry in the sorted map
+     * whose key starts with the given prefix.
      */
-    private static boolean matchesPrefixRange(NavigableMap<String, String> sortedMap, String prefix, String trimmedQuery) {
+    private static void collectPrefixRange(NavigableMap<String, String> sortedMap, String prefix, List<String> out) {
         for (Map.Entry<String, String> entry : sortedMap.tailMap(prefix, true).entrySet()) {
             String key = entry.getKey();
             if (!key.startsWith(prefix)) break;
@@ -187,9 +225,8 @@ public final class IrisShaderPackTranslations {
             String stripped = COLOR_CODE_PATTERN.matcher(rawValue).replaceAll("").trim();
             if (stripped.isEmpty() || NUMERIC_VALUE_PATTERN.matcher(stripped).matches()) continue;
 
-            if (stripped.toLowerCase(Locale.ROOT).contains(trimmedQuery)) return true;
+            out.add(stripped.toLowerCase(Locale.ROOT));
         }
-        return false;
     }
 
     private static void debugLog(String message) {

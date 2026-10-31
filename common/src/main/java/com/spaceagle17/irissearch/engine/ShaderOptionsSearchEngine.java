@@ -3,20 +3,27 @@ package com.spaceagle17.irissearch.engine;
 import com.spaceagle17.irissearch.logging.IrisSearchLogger;
 import org.jetbrains.annotations.NotNull;
 
+import com.spaceagle17.irissearch.engine.SearchCache.MenuText;
+import com.spaceagle17.irissearch.engine.SearchCache.OptionText;
+import com.spaceagle17.irissearch.engine.SearchCache.PreparedQuery;
+import com.spaceagle17.irissearch.engine.SearchCache.Texts;
+
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 public class ShaderOptionsSearchEngine {
-    private static final String WHOLE_WORD_REGEX = "(?<=^|[^a-zA-Z0-9])%s(?=$|[^a-zA-Z0-9])";
-    private static final String STARTS_WITH_REGEX = "(?<=^|[^a-zA-Z0-9])%s";
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     private static final int MIN_TYPO_WORD_LENGTH = 4;
-    private static final int MIN_FUZZY_SYNONYM_KEY_LENGTH = 3;
+
+    // Flags returned by matchFlags: how a needle occurs in a haystack.
+    private static final int MATCH_CONTAINS = 1;
+    private static final int MATCH_WORD_START = 2;
+    private static final int MATCH_WHOLE_WORD = 4;
 
     /**
      * Result of {@link #computeMatchTier}, containing an exact/synonym match {@code score}
@@ -78,19 +85,15 @@ public class ShaderOptionsSearchEngine {
         return weakest == Integer.MAX_VALUE ? 0 : weakest;
     }
 
-    private static boolean pathMatchesMenuScope(String path, List<String> scopeParts) {
-        return menuScopeTier(path, scopeParts) > 0;
-    }
-
     public static int computeMenuScopeTier(String query, String path) {
-        MenuScopedQuery scoped = parseMenuScope(query);
-        return scoped.hasScope() ? menuScopeTier(path, scoped.menuScope()) : 0;
+        if (query == null) return 0;
+        return SearchCache.prepare(query, SearchCache.texts().version).scopeTier(path);
     }
 
     private static int scopePartTierForSegment(String segmentId, String scopePart) {
         return Math.max(
                 scopePartTier(segmentId.toLowerCase(Locale.ROOT), scopePart),
-                scopePartTier(resolveMenuName(segmentId), scopePart));
+                scopePartTier(SearchCache.texts().menu(segmentId).translated(), scopePart));
     }
 
     private static int scopePartTier(String menuName, String scopePart) {
@@ -101,22 +104,15 @@ public class ShaderOptionsSearchEngine {
         return 0;
     }
 
-    private static String resolveMenuName(String screenId) {
-        String active = getReadableMenuName(screenId);
-        if (!active.isEmpty()) return active;
-        if (screenId == null || screenId.isEmpty()) return "";
-        return IrisShaderPackTranslations.getLowercaseDefaultTranslatedString("screen." + screenId).replaceAll("\\s+>", "");
-    }
-
     private static boolean allWordsMatch(String needle, String haystack, boolean wholeWord) {
         if (haystack.isEmpty()) return false;
         String[] words = WHITESPACE_PATTERN.split(needle.trim());
         if (words.length == 0) return false;
         for (String word : words) {
             if (word.isEmpty()) continue;
-            String format = wholeWord ? WHOLE_WORD_REGEX : STARTS_WITH_REGEX;
-            Pattern pattern = Pattern.compile(String.format(format, Pattern.quote(word)));
-            if (!pattern.matcher(haystack).find() && !(!wholeWord && haystack.contains(word))) return false;
+            // Loose mode accepts a word start or any substring, i.e. just "contains".
+            boolean found = wholeWord ? (matchFlags(haystack, word) & MATCH_WHOLE_WORD) != 0 : haystack.contains(word);
+            if (!found) return false;
         }
         return true;
     }
@@ -140,6 +136,13 @@ public class ShaderOptionsSearchEngine {
     }
 
     /**
+     * Drops everything {@link SearchCache} holds. The caches follow shader pack and language changes
+     */
+    static void invalidateCaches() { // package-private for tests
+        SearchCache.invalidate();
+    }
+
+    /**
      * Computes the match tier for an option ID against a query.
      *
      * @param optionId Option ID to search.
@@ -151,39 +154,32 @@ public class ShaderOptionsSearchEngine {
         try {
             if (optionId == null || query == null) return new MatchTierResult(0, false);
 
-            MenuScopedQuery scoped = parseMenuScope(query);
-            if (scoped.hasScope() && !pathMatchesMenuScope(path, scoped.menuScope())) {
+            Texts texts = SearchCache.texts();
+            PreparedQuery prepared = SearchCache.prepare(query, texts.version);
+            if (prepared.scoped.hasScope() && prepared.scopeTier(path) == 0) {
                 return new MatchTierResult(0, false);
             }
 
-            String trimmedQuery = scoped.term().toLowerCase(Locale.ROOT).trim();
+            String trimmedQuery = prepared.term;
             if (trimmedQuery.isEmpty()) {
                 // "water:" with no term: every option appears
-                return new MatchTierResult(scoped.hasScope() ? 1 : 0, false);
+                return new MatchTierResult(prepared.scoped.hasScope() ? 1 : 0, false);
             }
 
-            String readableTranslatedName = getReadableTranslatedName(optionId);
-            String readableDefaultName = getReadableDefaultName(optionId);
-            String rawId = optionId.toLowerCase(Locale.ROOT);
-            String commentText = MinecraftLanguageAccess.getLowercaseString("option." + optionId + ".comment");
+            OptionText option = texts.option(optionId);
+            MenuText menu = texts.menu(getLastPathSegment(path));
 
-            String menuId = getLastPathSegment(path);
-            String menuTranslatedName = resolveMenuName(menuId);
-            String menuRawId = menuId != null ? menuId.toLowerCase(Locale.ROOT) : "";
-
-            String[] tokens = WHITESPACE_PATTERN.split(trimmedQuery);
+            String[] tokens = prepared.tokens;
             if (tokens.length <= 1) {
-                int best = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
-                for (String synonym : resolveSynonyms(trimmedQuery)) {
-                    int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
+                int best = computeQueryStringTier(trimmedQuery, option, menu);
+                for (String synonym : prepared.termSynonyms) {
+                    int synonymScore = scanQueryStringTier(synonym, option, menu);
                     if (synonymScore > best) best = synonymScore;
                 }
                 if (best > 0) return new MatchTierResult(best, false);
 
                 // Typo tolerance: last resort once literal and synonym matching both came up empty.
-                boolean typo = typoMatchesAnyWord(trimmedQuery, readableTranslatedName) || typoMatchesAnyWord(trimmedQuery, readableDefaultName)
-                        || typoMatchesAnyWord(trimmedQuery, menuTranslatedName);
-                return new MatchTierResult(0, typo);
+                return new MatchTierResult(0, typoMatchesOption(trimmedQuery, option, menu));
             }
 
             // Multi-word query: ALL tokens must match (AND-combined via bitwise AND).
@@ -191,15 +187,14 @@ public class ShaderOptionsSearchEngine {
             // Typo-only tokens contribute no bits to score, but satisfy the token match requirement.
             int andScore = -1;
             boolean anyTokenTypo = false;
-            for (String token : tokens) {
-                int tokenScore = computeTokenTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
-                for (String synonym : resolveSynonyms(token)) {
-                    int synonymScore = computeTokenTier(optionId, synonym, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
+            for (int i = 0; i < tokens.length; i++) {
+                int tokenScore = scanQueryStringTier(tokens[i], option, menu);
+                for (String synonym : prepared.tokenSynonyms[i]) {
+                    int synonymScore = scanQueryStringTier(synonym, option, menu);
                     if (synonymScore > tokenScore) tokenScore = synonymScore;
                 }
                 if (tokenScore == 0) {
-                    if (typoMatchesAnyWord(token, readableTranslatedName) || typoMatchesAnyWord(token, readableDefaultName)
-                            || typoMatchesAnyWord(token, menuTranslatedName)) {
+                    if (typoMatchesOption(tokens[i], option, menu)) {
                         anyTokenTypo = true;
                         continue;
                     }
@@ -208,7 +203,7 @@ public class ShaderOptionsSearchEngine {
                 andScore &= tokenScore;
             }
             int realAndScore = andScore == -1 ? 0 : andScore; // -1 means no token ever folded in (all were typo-only)
-            int phraseScore = computeQueryStringTier(optionId, trimmedQuery, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
+            int phraseScore = computeQueryStringTier(trimmedQuery, option, menu);
             return new MatchTierResult(phraseScore | realAndScore, anyTokenTypo);
         } catch (Exception e) {
             debugLog("computeMatchTier threw for query \"" + query + "\", treating as no match");
@@ -216,99 +211,111 @@ public class ShaderOptionsSearchEngine {
         }
     }
 
-    /**
-     * Resolves synonyms for a query via exact or prefix key matching.
-     * Allows partial words (e.g., "godray" for "godrays") to expand to synonym groups.
-     * Typos of a dictionary key are deliberately not expanded, was bad UX
-     */
-    private static Set<String> resolveSynonyms(String token) {
-        Set<String> exact = SearchDictionaries.getSynonyms(token);
-        if (!exact.isEmpty() || token.length() < MIN_FUZZY_SYNONYM_KEY_LENGTH) return exact;
-
-        Set<String> prefix = new HashSet<>();
-        for (String key : SearchDictionaries.getSynonymKeys()) {
-            if (key.indexOf(' ') >= 0 || key.equals(token)) continue; // multi-word keys can't match a single token here
-            if (key.startsWith(token)) {
-                prefix.add(key);
-                prefix.addAll(SearchDictionaries.getSynonyms(key));
-            }
-        }
-        return prefix;
+    private static boolean isAsciiAlnum(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
     }
 
-    private static int scanQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
-                                            String readableDefaultName, String rawId, String commentText,
-                                            String menuTranslatedName, String menuRawId) {
-        String escapedQuery = Pattern.quote(singleQuery);
-        Pattern wholeWordPat = Pattern.compile(String.format(WHOLE_WORD_REGEX, escapedQuery));
-        Pattern startsWithPat = Pattern.compile(String.format(STARTS_WITH_REGEX, escapedQuery));
+    /**
+     * How {@code needle} occurs in {@code haystack}, as {@code MATCH_*} flags: anywhere, starting a word, or as a
+     * whole word, where word boundaries are any characters outside {@code [a-zA-Z0-9]}. Every occurrence is
+     * checked, so one that sits mid-word at first but starts or ends a word later still counts.
+     */
+    private static int matchFlags(String haystack, String needle) {
+        int idx = haystack.indexOf(needle);
+        if (idx < 0) return 0;
+
+        int flags = MATCH_CONTAINS;
+        int needleLength = needle.length();
+        while (idx >= 0) {
+            if (idx == 0 || !isAsciiAlnum(haystack.charAt(idx - 1))) {
+                flags |= MATCH_WORD_START;
+                int end = idx + needleLength;
+                if (end == haystack.length() || !isAsciiAlnum(haystack.charAt(end))) return flags | MATCH_WHOLE_WORD;
+            }
+            idx = haystack.indexOf(needle, idx + 1);
+        }
+        return flags;
+    }
+
+    private static int scanQueryStringTier(String singleQuery, OptionText option, MenuText menu) {
+        String translated = option.translated();
+        String defaultName = option.defaultName();
+        String comment = option.comment();
 
         // Translated name bits interleaved with default name bits (translated always one bit higher).
         // Default name bits sit above rawId/comment so en_us matches outrank ID/comment matches.
         // The containing-submenu bits sit at the very bottom: a menu-name match is the weakest signal,
         // only meant to surface options an on-topic match doesn't already cover.
         int score = 0;
-        if (!readableTranslatedName.isEmpty() && readableTranslatedName.equals(singleQuery))           score |= (1 << 16);
-        if (!readableDefaultName.isEmpty() && readableDefaultName.equals(singleQuery))                 score |= (1 << 15);
-        if (!readableTranslatedName.isEmpty() && wholeWordPat.matcher(readableTranslatedName).find())  score |= (1 << 14);
-        if (!readableDefaultName.isEmpty() && wholeWordPat.matcher(readableDefaultName).find())        score |= (1 << 13);
-        if (!readableTranslatedName.isEmpty() && startsWithPat.matcher(readableTranslatedName).find()) score |= (1 << 12);
-        if (!readableDefaultName.isEmpty() && startsWithPat.matcher(readableDefaultName).find())       score |= (1 << 11);
-        if (wholeWordPat.matcher(rawId).find())                                                        score |= (1 << 10);
-        if (!commentText.isEmpty() && wholeWordPat.matcher(commentText).find())                        score |= (1 << 9);
-        if (startsWithPat.matcher(rawId).find())                                                       score |= (1 << 8);
-        if (!commentText.isEmpty() && startsWithPat.matcher(commentText).find())                       score |= (1 << 7);
-        if (!readableTranslatedName.isEmpty() && readableTranslatedName.contains(singleQuery))         score |= (1 << 6);
-        if (!readableDefaultName.isEmpty() && readableDefaultName.contains(singleQuery))               score |= (1 << 5);
-        if (rawId.contains(singleQuery))                                                               score |= (1 << 4);
-        if (!commentText.isEmpty() && commentText.contains(singleQuery))                               score |= (1 << 3);
-        if (IrisShaderPackTranslations.matchesOptionValueTranslation(optionId, singleQuery))           score |= (1 << 2); // value.<optionId>.<suffix>
-        if (menuWholeWordMatches(menuTranslatedName, menuRawId, wholeWordPat))                         score |= (1 << 1);
-        if (menuLooseMatches(menuTranslatedName, menuRawId, startsWithPat, singleQuery))               score |= 1;
+
+        if (!translated.isEmpty()) {
+            if (translated.equals(singleQuery)) score |= (1 << 16);
+            int flags = matchFlags(translated, singleQuery);
+            if ((flags & MATCH_WHOLE_WORD) != 0) score |= (1 << 14);
+            if ((flags & MATCH_WORD_START) != 0) score |= (1 << 12);
+            if ((flags & MATCH_CONTAINS) != 0)   score |= (1 << 6);
+        }
+        if (!defaultName.isEmpty()) {
+            if (defaultName.equals(singleQuery)) score |= (1 << 15);
+            int flags = matchFlags(defaultName, singleQuery);
+            if ((flags & MATCH_WHOLE_WORD) != 0) score |= (1 << 13);
+            if ((flags & MATCH_WORD_START) != 0) score |= (1 << 11);
+            if ((flags & MATCH_CONTAINS) != 0)   score |= (1 << 5);
+        }
+
+        int rawFlags = matchFlags(option.rawId(), singleQuery);
+        if ((rawFlags & MATCH_WHOLE_WORD) != 0) score |= (1 << 10);
+        if ((rawFlags & MATCH_WORD_START) != 0) score |= (1 << 8);
+        if ((rawFlags & MATCH_CONTAINS) != 0)   score |= (1 << 4);
+
+        if (!comment.isEmpty()) {
+            int flags = matchFlags(comment, singleQuery);
+            if ((flags & MATCH_WHOLE_WORD) != 0) score |= (1 << 9);
+            if ((flags & MATCH_WORD_START) != 0) score |= (1 << 7);
+            if ((flags & MATCH_CONTAINS) != 0)   score |= (1 << 3);
+        }
+
+        for (String valueText : option.valueTexts()) { // value.<optionId>.<suffix>
+            if (valueText.contains(singleQuery)) {
+                score |= (1 << 2);
+                break;
+            }
+        }
+
+        int menuFlags = 0;
+        if (!menu.translated().isEmpty()) menuFlags |= matchFlags(menu.translated(), singleQuery);
+        if (!menu.rawId().isEmpty())      menuFlags |= matchFlags(menu.rawId(), singleQuery);
+        if ((menuFlags & MATCH_WHOLE_WORD) != 0) score |= (1 << 1);
+        if (menuFlags != 0)                      score |= 1; // starts a word in, or merely appears within, the submenu
 
         return score;
     }
 
-    /** Whether the query is a whole word within the containing submenu's translated name or raw screen id. */
-    private static boolean menuWholeWordMatches(String menuTranslatedName, String menuRawId, Pattern wholeWordPat) {
-        return (!menuTranslatedName.isEmpty() && wholeWordPat.matcher(menuTranslatedName).find())
-                || (!menuRawId.isEmpty() && wholeWordPat.matcher(menuRawId).find());
-    }
-
-    /** Whether the query starts a word in, or merely appears within, the containing submenu's translated name or raw screen id. */
-    private static boolean menuLooseMatches(String menuTranslatedName, String menuRawId, Pattern startsWithPat, String singleQuery) {
-        return (!menuTranslatedName.isEmpty() && (startsWithPat.matcher(menuTranslatedName).find() || menuTranslatedName.contains(singleQuery)))
-                || (!menuRawId.isEmpty() && (startsWithPat.matcher(menuRawId).find() || menuRawId.contains(singleQuery)));
-    }
-
     /** Computes the match tier of a single query string (one standalone token, or a full phrase) against an option's fields. */
-    private static int computeQueryStringTier(String optionId, String singleQuery, String readableTranslatedName,
-                                               String readableDefaultName, String rawId, String commentText,
-                                               String menuTranslatedName, String menuRawId) {
+    private static int computeQueryStringTier(String singleQuery, OptionText option, MenuText menu) {
         // 1 char Ascii query: only match if a readable name starts directly with the query
         // Only readableTranslatedName as that feels better
         if (singleQuery.length() == 1 && isOnlyAscii(singleQuery)) {
-            return (!readableTranslatedName.isEmpty() && readableTranslatedName.startsWith(singleQuery)) ? 1 : 0;
+            return (!option.translated().isEmpty() && option.translated().startsWith(singleQuery)) ? 1 : 0;
         }
 
-        return scanQueryStringTier(optionId, singleQuery, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
+        return scanQueryStringTier(singleQuery, option, menu);
     }
 
-    /**
-     * Computes the match tier for a single token in a multi-word AND query.
-     * Unlike {@link #computeQueryStringTier}, this bypasses the 1-character prefix restriction
-     * so partial multi-word queries (e.g., "bloom s") match on word boundaries normally.
-     */
-    private static int computeTokenTier(String optionId, String token, String readableTranslatedName,
-                                         String readableDefaultName, String rawId, String commentText,
-                                         String menuTranslatedName, String menuRawId) {
-        return scanQueryStringTier(optionId, token, readableTranslatedName, readableDefaultName, rawId, commentText, menuTranslatedName, menuRawId);
+    /** Whether the query is a close-enough typo of any word in the option's names or its submenu's name. */
+    private static boolean typoMatchesOption(String query, OptionText option, MenuText menu) {
+        return typoMatchesAnyWord(query, option.translatedWords()) || typoMatchesAnyWord(query, option.defaultWords())
+                || typoMatchesAnyWord(query, menu.translatedWords());
     }
 
     /** Whether any whitespace-separated word in {@code readableName} is a close-enough typo of {@code query}. */
     static boolean typoMatchesAnyWord(String query, String readableName) { // package-private for tests
         if (readableName == null || readableName.isEmpty()) return false;
-        for (String word : readableName.split("\\s+")) {
+        return typoMatchesAnyWord(query, WHITESPACE_PATTERN.split(readableName));
+    }
+
+    private static boolean typoMatchesAnyWord(String query, String[] words) {
+        for (String word : words) {
             if (isTypoMatch(query, word)) return true;
         }
         return false;
@@ -356,15 +363,13 @@ public class ShaderOptionsSearchEngine {
      * @return A flattened list of unique option IDs, preserving the order of first occurrence.
      */
     public static List<String> getAllOptionsFlattened(List<String> optionIds) {
-        List<String> flatList = new ArrayList<>();
-        if (optionIds == null) return flatList;
+        if (optionIds == null) return new ArrayList<>();
 
+        Set<String> unique = new LinkedHashSet<>();
         for (String optionId : optionIds) {
-            if (optionId != null && !flatList.contains(optionId)) {
-                flatList.add(optionId);
-            }
+            if (optionId != null) unique.add(optionId);
         }
-        return flatList;
+        return new ArrayList<>(unique);
     }
 
     // Bitmask of score bits that come from either readable name (translated bits 16,14,12,6 and default bits 15,13,11,5).
@@ -415,13 +420,13 @@ public class ShaderOptionsSearchEngine {
         // Prefer translated name; fall back to default name if no translated match.
         private static int compareByMatchedWordLength(ScoredOptionElement a, ScoredOptionElement b, String q) {
             if (q.isEmpty()) return 0;
-            String aWord = findMatchingWord(a.readableTranslatedName, q);
-            if (aWord == null) aWord = findMatchingWord(a.readableDefaultName, q);
-            String bWord = findMatchingWord(b.readableTranslatedName, q);
-            if (bWord == null) bWord = findMatchingWord(b.readableDefaultName, q);
-            int aLen = aWord != null ? aWord.length() : Integer.MAX_VALUE;
-            int bLen = bWord != null ? bWord.length() : Integer.MAX_VALUE;
-            return Integer.compare(aLen, bLen);
+            return Integer.compare(matchedWordLength(a, q), matchedWordLength(b, q));
+        }
+
+        private static int matchedWordLength(ScoredOptionElement element, String q) {
+            int length = findMatchingWordLength(element.readableTranslatedName, q);
+            if (length < 0) length = findMatchingWordLength(element.readableDefaultName, q);
+            return length >= 0 ? length : Integer.MAX_VALUE;
         }
 
         // 4. Fewer words in readable name = more precise match.
@@ -460,17 +465,38 @@ public class ShaderOptionsSearchEngine {
             return 0;
         }
 
-        private static String findMatchingWord(String readableName, String query) {
-            if (readableName == null || query.isEmpty()) return null;
-            for (String word : readableName.split("\\s+")) {
-                if (word.startsWith(query)) return word;
+        // Runs inside the sort comparator, so it walks the string instead of splitting it.
+        // Whitespace is what the "\\s" regex class means: space, \t, \n, \u000B, \f, \r.
+        private static boolean isRegexWhitespace(char c) {
+            return c == ' ' || (c >= '\t' && c <= '\r');
+        }
+
+        /** Length of the first whitespace-separated word starting with {@code query}, or -1 if there is none. */
+        private static int findMatchingWordLength(String readableName, String query) {
+            if (readableName == null || query.isEmpty()) return -1;
+            int length = readableName.length();
+            int i = 0;
+            while (i < length) {
+                while (i < length && isRegexWhitespace(readableName.charAt(i))) i++;
+                int start = i;
+                while (i < length && !isRegexWhitespace(readableName.charAt(i))) i++;
+                if (i - start >= query.length() && readableName.startsWith(query, start)) return i - start;
             }
-            return null;
+            return -1;
         }
 
         private static int countWords(String s) {
             if (s == null || s.isBlank()) return 0;
-            return s.trim().split("\\s+").length;
+            int count = 0;
+            int length = s.length();
+            int i = 0;
+            while (i < length) {
+                while (i < length && isRegexWhitespace(s.charAt(i))) i++;
+                if (i == length) break;
+                count++;
+                while (i < length && !isRegexWhitespace(s.charAt(i))) i++;
+            }
+            return count;
         }
 
         private static int countSlashes(String path) {
@@ -492,23 +518,19 @@ public class ShaderOptionsSearchEngine {
 
     /** Delegates to {@link MinecraftLanguageAccess} for the currently active game language's translation. */
     public static String getReadableTranslatedName(String optionId) {
-        return MinecraftLanguageAccess.getLowercaseString("option." + optionId);
+        if (optionId == null) return MinecraftLanguageAccess.getLowercaseString("option." + optionId);
+        return SearchCache.texts().option(optionId).translated();
     }
 
     /** Delegates to {@link IrisShaderPackTranslations} for the shader pack's own en_us default translation. */
     public static String getReadableDefaultName(String optionId) {
-        return IrisShaderPackTranslations.getLowercaseDefaultTranslatedString("option." + optionId);
+        if (optionId == null) return IrisShaderPackTranslations.getLowercaseDefaultTranslatedString("option." + optionId);
+        return SearchCache.texts().option(optionId).defaultName();
     }
 
     /** Delegates to {@link MinecraftLanguageAccess} for a "screen.xxx" translation, e.g. for breadcrumb labels. */
     public static String getDisplaySettingsName(String screenId) {
         return MinecraftLanguageAccess.getColorStrippedString("screen." + screenId);
-    }
-
-    /** Lowercase, search-ready counterpart of {@link #getDisplaySettingsName}, for matching a submenu name against a query. */
-    private static String getReadableMenuName(String screenId) {
-        if (screenId == null || screenId.isEmpty()) return "";
-        return MinecraftLanguageAccess.getLowercaseString("screen." + screenId).replaceAll("\\s+>", "");
     }
 
     /**

@@ -2,6 +2,7 @@ package com.spaceagle17.irissearch.engine;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -159,5 +160,28 @@ public final class SearchDictionaries {
     /** Every synonym-group key (abbreviations and full phrases alike), for fuzzy fallback lookups. */
     public static Set<String> getSynonymKeys() {
         return SYNONYM_LOOKUP.keySet();
+    }
+
+    private static final int MIN_FUZZY_SYNONYM_KEY_LENGTH = 3;
+    private static final String[] NO_SYNONYMS = new String[0];
+
+    /**
+     * Resolves synonyms for a query token via exact or prefix key matching.
+     * Allows partial words (e.g., "godray" for "godrays") to expand to synonym groups.
+     * Typos of a dictionary key are deliberately not expanded, was bad UX
+     */
+    static String[] resolveSynonyms(String token) {
+        Set<String> exact = getSynonyms(token);
+        if (!exact.isEmpty() || token.length() < MIN_FUZZY_SYNONYM_KEY_LENGTH) return exact.toArray(NO_SYNONYMS);
+
+        Set<String> prefix = new LinkedHashSet<>();
+        for (String key : getSynonymKeys()) {
+            if (key.indexOf(' ') >= 0 || key.equals(token)) continue; // multi-word keys can't match a single token here
+            if (key.startsWith(token)) {
+                prefix.add(key);
+                prefix.addAll(getSynonyms(key));
+            }
+        }
+        return prefix.toArray(NO_SYNONYMS);
     }
 }

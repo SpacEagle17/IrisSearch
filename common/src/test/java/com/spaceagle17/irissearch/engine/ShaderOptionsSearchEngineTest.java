@@ -47,6 +47,7 @@ class ShaderOptionsSearchEngineTest {
         Language.reset();
         Iris.reset();
         enUsAccumulator.clear();
+        ShaderOptionsSearchEngine.invalidateCaches();
     }
 
     /**
@@ -59,6 +60,7 @@ class ShaderOptionsSearchEngineTest {
         if (translatedName != null) vanilla.put("option." + optionId, translatedName);
         if (comment != null) vanilla.put("option." + optionId + ".comment", comment);
         Language.addTranslations(vanilla);
+        ShaderOptionsSearchEngine.invalidateCaches();
 
         if (defaultName != null) enUsAccumulator.put("option." + optionId, defaultName);
         if (valueTranslations != null) {
@@ -241,6 +243,25 @@ class ShaderOptionsSearchEngineTest {
         void matchesViaComment() {
             configureOption("OPT_E5F6", null, null, "Adjusts the volumetric fog density.", null);
             assertTrue(matches("OPT_E5F6", "volumetric", null));
+        }
+
+        @Test
+        @DisplayName("Regression: switching shader packs is reflected without any manual cache reset")
+        void followsShaderPackSwitch() {
+            LanguageMap packA = new LanguageMap();
+            packA.put("en_us", Map.of("option.OPT_SWITCH", "Alpha Setting", "value.OPT_SWITCH.0", "Gamma Mode"));
+            Iris.setCurrentPack(new ShaderPack(packA));
+            assertTrue(matches("OPT_SWITCH", "alpha", null));
+            assertTrue(matches("OPT_SWITCH", "gamma", null));
+            assertFalse(matches("OPT_SWITCH", "bravo", null));
+
+            LanguageMap packB = new LanguageMap();
+            packB.put("en_us", Map.of("option.OPT_SWITCH", "Bravo Setting", "value.OPT_SWITCH.0", "Delta Mode"));
+            Iris.setCurrentPack(new ShaderPack(packB));
+            assertTrue(matches("OPT_SWITCH", "bravo", null));
+            assertTrue(matches("OPT_SWITCH", "delta", null));
+            assertFalse(matches("OPT_SWITCH", "alpha", null));
+            assertFalse(matches("OPT_SWITCH", "gamma", null));
         }
 
         @Test
